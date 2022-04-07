@@ -6,10 +6,10 @@
 The Minneapolis-St. Paul Metropolitan area is a metropolis of over 3.1 million people as of 2019 [1]. With a large population, traffic congestion is a significant problem for commuters, causing drivers in the Minneapolis-St. Paul region to lose an estimated 52 hours each in 2019, according to a summary of the INRIX 2019 Global Traffic Scorecard reported in the Minneapolis/St. Paul Business Journal [2]. Additionally, adverse weather, particularly in winter months, can cause major traffic issues and cause further disruptions. Understanding traffic patterns at different times of the year and at different hours of the day in the region is vital for city planners to develop solutions for mounting traffic problems and for commuters to be able to plan daily travel.
 
 ### Mission
-This web application will predict traffic counts along westbound Interstate 94 at Minnesota DoT ATR Station 301, which is located near mile marker 239 in St. Paul [3], to inform users of possible traffic at a given time using a predictive model. Data was obtained from the UCI Machine Learning Library [https://archive.ics.uci.edu/ml/datasets/Metro+Interstate+Traffic+Volume](https://archive.ics.uci.edu/ml/datasets/Metro+Interstate+Traffic+Volume) [4], which contains both hourly traffic counts from 2012-2018 from the Minnesota Department of Transportation [5] and weather information, such as temperature, hourly precipitation totals, and weather descriptors originating from OpenWeatherMap [6]. With this web application, a user, such as a daily commuter, will be able to input the forecasted weather conditions for a given time and receive a prediction of hourly traffic volume and a label of “heavy”, “medium”, or “light” traffic. This application will help drivers plan their commute along this stretch of Interstate 94 and can serve as the first step in developing a comprehensive traffic prediction tool for the Minneapolis – St. Paul region.
+This web application will predict traffic counts along westbound Interstate 94 at Minnesota DoT ATR Station 301, which is located near mile marker 239 in St. Paul [3], to inform users of possible traffic at a given time using a predictive model. Data was obtained from the UCI Machine Learning Repository [https://archive.ics.uci.edu/ml/datasets/Metro+Interstate+Traffic+Volume](https://archive.ics.uci.edu/ml/datasets/Metro+Interstate+Traffic+Volume) [4], which contains both hourly traffic counts from 2012-2018 from the Minnesota Department of Transportation [5] and weather information, such as temperature, hourly precipitation totals, and weather descriptors originating from OpenWeatherMap [6]. With this web application, a user, such as a daily commuter, will be able to input the forecasted weather conditions for a given time and receive a prediction of hourly traffic volume and a label of “heavy”, “medium”, or “light” traffic. This application will help drivers plan their commute along this stretch of Interstate 94 and can serve as the first step in developing a comprehensive traffic prediction tool for the Minneapolis – St. Paul region.
 
 ### Success Criteria
-During model development, a 5-fold cross-validation R-squared of at least 0.8 should be achieved before the model is deployed, meaning that a successful predictive model will be able to explain at least 80% of the variation in traffic counts at ATR Station 301. However, this metric can be negotiated with project stakeholders if initial data analysis reveals that there is more variation in the data than is initially anticipated.
+During model development, a 5-fold cross-validation R-squared of at least 0.8 should be achieved before the model is deployed, meaning that a successful predictive model will be able to explain at least 80% of the variation in hourly traffic counts at ATR Station 301. However, this metric can be negotiated with project stakeholders if initial data analysis reveals that there is more variation in the data than is initially anticipated.
 
 Additionally, when the web application is deployed to the public, data on user satisfaction with the web application will be collected by asking users “Was this prediction helpful?”. Responses in the form of clicking a “like” or a “dislike” button will be recorded, and a threshold of 75% likes will need to be achieved to consider this project successful. If successful, the project stakeholders can consider developing additional predictive models and web applications for traffic counts at other locations across the Minneapolis-St. Paul region.
 
@@ -20,7 +20,7 @@ Additionally, when the web application is deployed to the public, data on user s
 
 [3] Minnesota Department of Transportation. (2018). *Monthly Report, Station No. 301 (ATR) January 2018*. [https://dot.state.mn.us/traffic/data/reports/atr/Monthly_PDFs/Jan18/301.pdf](https://dot.state.mn.us/traffic/data/reports/atr/Monthly_PDFs/Jan18/301.pdf)
 
-[4] Dua, D. and Graff, C. (2019). UCI Machine Learning Repository [http://archive.ics.uci.edu/ml]. Irvine, CA: University of California, School of Information and Computer Science. *Metro Interstate Traffic Volume Data Set*  [https://archive.ics.uci.edu/ml/datasets/Metro+Interstate+Traffic+Volume](https://archive.ics.uci.edu/ml/datasets/Metro+Interstate+Traffic+Volume)
+[4] Dua, D. and Graff, C. (2019). UCI Machine Learning Repository [http://archive.ics.uci.edu/ml]. Irvine, CA: University of California, School of Information and Computer Science. *Metro Interstate Traffic Volume Data Set*.  [https://archive.ics.uci.edu/ml/datasets/Metro+Interstate+Traffic+Volume](https://archive.ics.uci.edu/ml/datasets/Metro+Interstate+Traffic+Volume)
 
 [5] Minnesota Department of Transportation. [https://www.dot.state.mn.us/](https://www.dot.state.mn.us/)
 
@@ -39,7 +39,7 @@ Additionally, when the web application is deployed to the public, data on user s
 
 
 
-# Template README
+# Template ReadME
 
 # Table of Contents
 * [Directory structure ](#Directory-structure)
