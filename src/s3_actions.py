@@ -90,6 +90,11 @@ def s3_write(data_source: str, s3_destination: str, delimiter: str = ",") -> Non
             # This exception will catch any AWS service exceptions. More information at:
             # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/error-handling.html
             logger.error("A client error occurred - could not write data to AWS S3 bucket. %s", client_error)
+        except PermissionError as permission_error:
+            # This error will occur if the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables are not set.
+            logger.error("Permission Error, could not write data to AWS S3 bucket."
+                         "Ensure the environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are activated."
+                         "Error: %s", permission_error)
         except Exception as unknown_error:
             logger.error("An unknown error occurred. Could not write data to AWS S3 bucket. %s", unknown_error)
         else:
@@ -124,18 +129,24 @@ def s3_read(s3_source: str, delimiter: str = ",") -> pd.DataFrame:
         logger.error("Could not read data from AWS S3 bucket. "
                      "Ensure the environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are activated."
                      "Error: %s", no_credentials_error)
+    except PermissionError as permission_error:
+        # This error will occur if the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables are not set.
+        logger.error("Permission Error, could not read data from AWS S3 bucket."
+                     "Ensure the environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are activated."
+                     "Error: %s", permission_error)
     except botocore.exceptions.ClientError as client_error:
         # This exception will catch any AWS service exceptions. More information at:
         # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/error-handling.html
         logger.error("A client error occurred - could not read data from AWS S3 bucket. %s", client_error)
-    except Exception as unknown_error:
-        logger.error("An unknown error occurred. Could not read data from AWS S3 bucket. %s", unknown_error)
+    #except Exception as unknown_error:
+        #logger.error("An unknown error occurred. Could not read data from AWS S3 bucket. %s", unknown_error)
     else:
         logger.info("Successfully read data from AWS S3, %s", s3_source)
-    finally:
+    #finally:
         # Check if the dataframe is empty. If it is empty, raise a valueError because it means reading from S3 failed.
-        if data.empty:
-            raise ValueError("Could not read data from AWS S3, returning empty dataframe.")
+        #if data.empty:
+            #logger.warning("Dataframe is empty")
+            #raise ValueError("Could not read data from AWS S3, returning empty dataframe.")
 
     return data
 
