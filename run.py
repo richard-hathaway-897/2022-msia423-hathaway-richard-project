@@ -4,7 +4,8 @@ import argparse
 import logging.config
 
 from config.flaskconfig import SQLALCHEMY_DATABASE_URI
-from src.add_songs import create_db, add_song
+#from src.add_songs import create_db, add_song
+from src.create_tables_rds import create_db_richard
 
 logging.config.fileConfig('config/logging/local.conf')
 logger = logging.getLogger('penny-lane-pipeline')
@@ -38,8 +39,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     sp_used = args.subparser_name
     if sp_used == 'create_db':
-        create_db(args.engine_string)
+        create_db_richard(args.engine_string)
     elif sp_used == 'ingest':
-        add_song(args)
+        #add_song(args)
+        pass
     else:
         parser.print_help()

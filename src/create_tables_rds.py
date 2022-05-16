@@ -9,33 +9,10 @@ from sqlalchemy.exc import OperationalError
 
 logger = logging.getLogger(__name__)
 
-# put all of these in try blocks?
-# connection_type = "mysql+pymysql"
-# mysql_user = os.getenv("MYSQL_USER")
-# mysql_password = os.getenv("MYSQL_PASSWORD")
-# mysql_host = os.getenv("MYSQL_HOST")
-# mysql_port = os.getenv("MYSQL_PORT")
-# mysql_db_name = os.getenv("DATABASE_NAME")
-# engine_string = f"{connection_type}://{mysql_user}:{mysql_password}@{mysql_host}:{mysql_port}/{mysql_db_name}"
-engine_string = os.getenv("SQLALCHEMY_DATABASE_URI")
-
-# Make sure the environment variable exists
-if engine_string is None:
-    logger.error("Environment variable SQLALCHEMY_DATABASE_URI does not exist.")
-
-# Try to create the sqlalchemy engine.
-try:
-    engine = sqlalchemy.create_engine(engine_string)
-except OperationalError as o_error:
-    logger.error("Could not create the sqlalchemy engine: %s", o_error)
-    engine = None
-except Exception as other_exception:
-    logger.error(other_exception)
-    engine = None
-else:
-    logger.debug("Successfully created engine.")
-
 Base = declarative_base()
+#engine_string = os.getenv("SQLALCHEMY_DATABASE_URI")
+
+
 
 class HistoricalQueries(Base):
     """
@@ -56,7 +33,6 @@ class HistoricalQueries(Base):
     hour = Column(Integer, unique = False, nullable = False) # Hour
     day_of_week = Column(String(15), unique = False, nullable = False) # Day of week
     holiday = Column(Integer, unique = False, nullable = False)  # Holiday, binary 1 or 0 indicating if there is a holiday
-    # Can I put a constraint of 0 or 1?
     rainfall_hour = Column(Float, unique = False, nullable = False) # Amount of rainfall in millimeters that fell in 1 hour
 
 
@@ -75,14 +51,48 @@ class HistoricalQueries(Base):
               f"Rainfall_Hour: {self.rainfall_hour}")
 
 
-if __name__ == "__main__":
+
+def create_db_richard(engine_string: str) -> None:
+
+    logger.info("Richard's function")
+
+
+    # Make sure the environment variable exists
+    if engine_string is None:
+        logger.error("Environment variable SQLALCHEMY_DATABASE_URI does not exist.")
+
+
+
+
+    # Try to create the sqlalchemy engine.
     try:
-        Base.metadata.create_all(engine) # what is this line really doing, and what error could it return??
-    # TODO: Add another exception
-    except Exception as other_error:
-        logger.error("Could not create the table: %s", other_error)
+        engine = sqlalchemy.create_engine(engine_string)
+    except OperationalError as o_error:
+        # This error will occur if the SQL Alchemy engine can not be created
+        logger.error("Could not create the sqlalchemy engine: %s", o_error)
+
+    except Exception as other_exception:
+        logger.error(other_exception)
+
     else:
-        logger.info("Created table.")
+        logger.debug("Successfully created engine.")
+
+        try:
+            Base.metadata.create_all(engine)  # what is this line really doing, and what error could it return??
+        # TODO: Add another exception
+        except Exception as other_error:
+            logger.error("Could not create the table: %s", other_error)
+        else:
+            logger.info("Created table.")
+
+# if __name__ == "__main__":
+#     try:
+#         Base.metadata.create_all(engine) # what is this line really doing, and what error could it return??
+#     # TODO: Add another exception
+#     except Exception as other_error:
+#         logger.error("Could not create the table: %s", other_error)
+#     else:
+#         logger.info("Created table.")
 
 
 
