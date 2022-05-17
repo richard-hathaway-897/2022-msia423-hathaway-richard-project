@@ -11,6 +11,7 @@ import config.config
 from src.create_tables_rds import create_db_richard
 from src.s3_actions import s3_write
 import src.data_preprocessing
+import src.train_model
 
 logging.config.fileConfig('config/logging/local.conf')
 logger = logging.getLogger('penny-lane-pipeline')
@@ -74,6 +75,18 @@ if __name__ == '__main__':
                         default = ",",
                         help = "The delimiter of the file.")
 
+
+    sp_generate_features = subparsers.add_parser("train_model",
+                                      description="Fetch raw data and save to S3")
+    sp_generate_features.add_argument("--data_source", type=str,
+                        required=True,
+                        help = "Path of the data on s3 to read from or write to.")
+    # sp_generate_features.add_argument("--output_path", type=str,
+    #                     help = "Local path or URL to read from or write to.")
+    sp_generate_features.add_argument("--delimiter", type=str,
+                        default = ",",
+                        help = "The delimiter of the file.")
+
     args = parser.parse_args()
     command_choice = args.subparser_name
     if command_choice == 'create_db':
@@ -99,5 +112,7 @@ if __name__ == '__main__':
                                                      features_path=args.output_path,
                                                      preprocess_params=preprocess_parameters["preprocess_data"],
                                                      delimiter=args.delimiter)
+    elif command_choice == 'train_model':
+        src.train_model.train_model(model_data_source=args.data_source, delimiter = args.delimiter)
     else:
         parser.print_help()
