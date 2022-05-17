@@ -62,7 +62,7 @@ def s3_write(data_source: typing.Union[str, pd.DataFrame], s3_destination: str, 
     """
 
     raw_data = None
-    if data_source.isinstance(pd.DataFrame):
+    if isinstance(data_source, pd.DataFrame):
         raw_data = data_source
 
     else:
@@ -79,6 +79,9 @@ def s3_write(data_source: typing.Union[str, pd.DataFrame], s3_destination: str, 
         except FileNotFoundError as file_error:
             # This error will occur if the local file path does not exist.
             logger.error("Could not read the data because the specified file does not exist! %s", file_error)
+        except pd.errors.ParserError as parser_error:
+            # error caused by data_source as https://archive.ics.uci.edu/ml/datasets/Metro+Interstate+Traffic+Volume
+            logger.error("Could not read the data. This may occur if you fetch a website instead of a zipped csv file.")
         except Exception as unknown_error:
             # This error will catch any other potential exceptions
             logger.error("Could not read the data because an unknown error occured. %s", unknown_error)
@@ -88,7 +91,7 @@ def s3_write(data_source: typing.Union[str, pd.DataFrame], s3_destination: str, 
 
     if raw_data is not None:
         try:
-            raw_data.to_csv(s3_destination, sep=delimiter)
+            raw_data.to_csv(s3_destination, sep=delimiter, index=False)
         except botocore.exceptions.NoCredentialsError as no_credentials_error:
             # This error will occur if the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables are not set.
             logger.error("Could not write data to AWS S3 bucket. "
@@ -103,10 +106,14 @@ def s3_write(data_source: typing.Union[str, pd.DataFrame], s3_destination: str, 
             logger.error("Permission Error, could not write data to AWS S3 bucket."
                          "Ensure the environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are activated."
                          "Error: %s", permission_error)
+        except OSError as os_error:
+            # This error will occur if a local directory is specified that does not exist.
+            logger.error("The output directory does not exist: %s", os_error)
         except Exception as unknown_error:
             logger.error("An unknown error occurred. Could not write data to AWS S3 bucket. %s", unknown_error)
         else:
-            logger.info("Successfully uploaded data to %s", s3_destination)
+            logger.info("Successfully saved data to %s", s3_destination)
+            logger.info("Saved data has %d records and %d columns.", raw_data.shape[0], raw_data.shape[1])
     else:
         logger.error("Failed to write data to S3. Data source could not be read.")
 
