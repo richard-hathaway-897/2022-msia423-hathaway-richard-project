@@ -1,6 +1,7 @@
 import argparse
 import logging
 import urllib.error
+import typing
 
 import botocore.exceptions
 import pandas as pd
@@ -42,12 +43,13 @@ def process_commandline_args(command_line_arguments: argparse.Namespace) -> None
             logger.error(value_error)
 
 
-def s3_write(data_source: str, s3_destination: str, delimiter: str = ",") -> None:
+def s3_write(data_source: typing.Union[str, pd.DataFrame], s3_destination: str, delimiter: str = ",") -> None:
     """
     This function fetches a data source, reads it into a pandas dataframe, and uploads it to S3 as a csv file.
 
     Args:
-        data_source (str): The source of the data. This can be a local file path or a URL.
+        data_source (typing.Union[str, pd.DataFrame]): The source of the data. This can be an existing pandas dataframe
+            or a string local file path or a URL.
         s3_destination (str): The file path in S3 to upload the data to.
         delimiter (str): The delimiter character separating entries in the csv file.
 
@@ -59,26 +61,32 @@ def s3_write(data_source: str, s3_destination: str, delimiter: str = ",") -> Non
 
     """
 
-    # TODO: Potentially add an option to pass in a pandas dataframe instead of a string
-    try:
-        raw_data = pd.read_csv(data_source)
+    raw_data = None
+    if data_source.isinstance(pd.DataFrame):
+        raw_data = data_source
 
-    except urllib.error.HTTPError as http_error:
-        # This error will occur if file does not exist at the specified location on a website's domain.
-        logger.error("Could not read the data because the data source was invalid: %s", http_error)
-    except urllib.error.URLError as url_error:
-        # This error will occur if the website does not exist.
-        logger.error("Could not read the data because the url was invalid: %s", url_error)
-    except FileNotFoundError as file_error:
-        # This error will occur if the local file path does not exist.
-        logger.error("Could not read the data because the specified file does not exist! %s", file_error)
-    except Exception as unknown_error:
-        # This error will catch any other potential exceptions
-        logger.error("Could not read the data because an unknown error occured. %s", unknown_error)
     else:
-        # If the data source is successfully read, log the message and try to upload the dataframe to S3.
-        logger.info("Successfully read data from: %s", data_source)
+        # TODO: Potentially add an option to pass in a pandas dataframe instead of a string
+        try:
+            raw_data = pd.read_csv(data_source)
 
+        except urllib.error.HTTPError as http_error:
+            # This error will occur if file does not exist at the specified location on a website's domain.
+            logger.error("Could not read the data because the data source was invalid: %s", http_error)
+        except urllib.error.URLError as url_error:
+            # This error will occur if the website does not exist.
+            logger.error("Could not read the data because the url was invalid: %s", url_error)
+        except FileNotFoundError as file_error:
+            # This error will occur if the local file path does not exist.
+            logger.error("Could not read the data because the specified file does not exist! %s", file_error)
+        except Exception as unknown_error:
+            # This error will catch any other potential exceptions
+            logger.error("Could not read the data because an unknown error occured. %s", unknown_error)
+        else:
+            # If the data source is successfully read, log the message and try to upload the dataframe to S3.
+            logger.info("Successfully read data from: %s", data_source)
+
+    if raw_data is not None:
         try:
             raw_data.to_csv(s3_destination, sep=delimiter)
         except botocore.exceptions.NoCredentialsError as no_credentials_error:
@@ -99,6 +107,8 @@ def s3_write(data_source: str, s3_destination: str, delimiter: str = ",") -> Non
             logger.error("An unknown error occurred. Could not write data to AWS S3 bucket. %s", unknown_error)
         else:
             logger.info("Successfully uploaded data to %s", s3_destination)
+    else:
+        logger.error("Failed to write data to S3. Data source could not be read.")
 
 
 def s3_read(s3_source: str, delimiter: str = ",") -> pd.DataFrame:
