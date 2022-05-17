@@ -73,8 +73,9 @@ def generate_features(data_source: str, features_path: str, preprocess_params: d
                                                                           list(preprocess_params["log_transform_columns"]) +
                                                                           list(preprocess_params["binarize_columns"])))
 
-    traffic = one_hot_encoding(traffic, preprocess_params["one_hot_encode_columns"])
+
     traffic = traffic.reset_index(drop=True)
+    traffic = one_hot_encoding(traffic, preprocess_params["one_hot_encode_columns"])
     traffic_final_shape = traffic.shape
     logger.info("Finished generating features. Final dataset contains %d records and %d columns", traffic_final_shape[0], traffic_final_shape[1])
 
@@ -142,6 +143,8 @@ def binarize(value: str, zero_value: str) -> int:
 def one_hot_encoding(data: pd.DataFrame, one_hot_encode_columns: typing.List) -> pd.DataFrame:
 
     logger.info("Prior to One Hot Encoding, data has %d columns.", data.shape[1])
+    logger.info("Number of NA values: %d", data.isna().sum().sum())
+    # TODO: Make these drop and sparse commands into params? I dont think they would ever change.
     one_hot_encoder = sklearn.preprocessing.OneHotEncoder(drop='first', sparse=False)
     one_hot_array = one_hot_encoder.fit_transform(data[one_hot_encode_columns])
     one_hot_column_names = one_hot_encoder.get_feature_names_out()
@@ -151,6 +154,9 @@ def one_hot_encoding(data: pd.DataFrame, one_hot_encode_columns: typing.List) ->
     logger.info("One Hot Encoded the following columns: %s", str(one_hot_encode_columns))
     logger.info("After One Hot Encoding, data has %d columns.", data_one_hot_encoded.shape[1])
 
+    # TODO: CHECK FOR NULL VALUES!!!
+
+    logger.info("Number of NA values: %d", data_one_hot_encoded.isna().sum().sum())
     return data_one_hot_encoded
 
 # Check for duplicates
