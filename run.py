@@ -6,6 +6,8 @@ import logging.config
 from config.flaskconfig import SQLALCHEMY_DATABASE_URI
 #from src.add_songs import create_db, add_song
 from src.create_tables_rds import create_db_richard
+from src.s3_actions import s3_write
+import src.data_preprocessing
 
 logging.config.fileConfig('config/logging/local.conf')
 logger = logging.getLogger('penny-lane-pipeline')
@@ -36,12 +38,39 @@ if __name__ == '__main__':
                            default='sqlite:///data/tracks.db',
                            help="SQLAlchemy connection URI for database")
 
+    sp_fetch_raw_data = subparsers.add_parser("fetch",
+                                      description="Fetch raw data and save to S3")
+    sp_fetch_raw_data.add_argument("--path_s3", type=str,
+                        required=True,
+                        help = "Path of the data on s3 to read from or write to.")
+    sp_fetch_raw_data.add_argument("--data_url", type=str,
+                        help = "Local path or URL to read from or write to.")
+    sp_fetch_raw_data.add_argument("--delimiter", type=str,
+                        default = ",",
+                        help = "The delimiter of the file.")
+
+    sp_clean_data = subparsers.add_parser("clean",
+                                      description="Fetch raw data and save to S3")
+    sp_clean_data.add_argument("--raw_data", type=str,
+                        required=True,
+                        help = "Path of the data on s3 to read from or write to.")
+    sp_clean_data.add_argument("--clean_data", type=str,
+                        help = "Local path or URL to read from or write to.")
+    sp_clean_data.add_argument("--delimiter", type=str,
+                        default = ",",
+                        help = "The delimiter of the file.")
+
     args = parser.parse_args()
-    sp_used = args.subparser_name
-    if sp_used == 'create_db':
+    command_choice = args.subparser_name
+    if command_choice == 'create_db':
         create_db_richard(args.engine_string)
-    elif sp_used == 'ingest':
+    elif command_choice == 'ingest':
         #add_song(args)
         pass
+    elif command_choice == 'fetch':
+        s3_write(s3_destination=args.path_s3, data_source=args.data_url, delimiter=args.delimiter)
+    elif command_choice == 'clean':
+        src.data_preprocessing.clean_data(data_source=args.raw_data, clean_data_path=args.clean_data,
+                                          delimiter=args.delimiter)
     else:
         parser.print_help()
