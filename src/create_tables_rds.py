@@ -1,4 +1,5 @@
 import logging
+import sqlite3
 import typing
 import os
 
@@ -6,12 +7,13 @@ import sqlalchemy
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, Float, String
 from sqlalchemy.exc import OperationalError
+import flask
+from flask_sqlalchemy import SQLAlchemy
 
 logger = logging.getLogger(__name__)
 
 Base = declarative_base()
 #engine_string = os.getenv("SQLALCHEMY_DATABASE_URI")
-
 
 
 class HistoricalQueries(Base):
@@ -51,6 +53,65 @@ class HistoricalQueries(Base):
               f"Rainfall_Hour: {self.rainfall_hour}")
 
 
+class QueryManager:
+    """Creates a SQLAlchemy connection to the tracks table.
+
+    Args:
+        app (:obj:`flask.app.Flask`): Flask app object for when connecting from
+            within a Flask app. Optional.
+        engine_string (str): SQLAlchemy engine string specifying which database
+            to write to. Follows the format
+    """
+    def __init__(self, app: typing.Optional[flask.app.Flask] = None,
+                 engine_string: typing.Optional[str] = None):
+        if app:
+            self.database = SQLAlchemy(app)
+            self.session = self.database.session
+        elif engine_string:
+            # TODO: add exception handling
+            engine = sqlalchemy.create_engine(engine_string)
+            session_maker = sqlalchemy.orm.sessionmaker(bind=engine)
+            self.session = session_maker()
+        else:
+            raise ValueError("Need either an engine string or Flask app to initialize the connection to the database")
+
+    def close(self) -> None:
+        """Closes SQLAlchemy session
+
+        Returns: None
+
+        """
+        self.session.close()
+
+    def add_new_query(self, query_params: dict, query_prediction: float) -> None:
+        """
+
+        """
+
+        # Will check the database first to see if the record exists
+        # If it does, increment and retreive prediction.
+        # Else, train TMO, get prediction, and add query to DB.
+        session = self.session
+        user_query = HistoricalQueries(query_count=1,
+                                       predicted_traffic_count=query_prediction,
+                                       temperature=query_params["temperature"],
+                                       cloud_percentage=query_params["cloud_percentage"],
+                                       weather_description=query_params["weather_description"],
+                                       year=query_params["year"],
+                                       month=query_params["month"],
+                                       day=query_params["day"],
+                                       hour=query_params["hour"],
+                                       day_of_week=query_params["day_of_week"],
+                                       holiday=query_params["holiday"],
+                                       rainfall_hour=query_params["rainfall_hour"])
+        # TODO: exception handling
+        session.add(user_query)
+        session.commit()
+        logger.info("Added query to the database.")
+
+    def search_for_query(self):
+        return
+
 
 def create_db_richard(engine_string: str) -> None:
 
@@ -60,8 +121,6 @@ def create_db_richard(engine_string: str) -> None:
     # Make sure the environment variable exists
     if engine_string is None:
         logger.error("Environment variable SQLALCHEMY_DATABASE_URI does not exist.")
-
-
 
 
     # Try to create the sqlalchemy engine.
@@ -84,6 +143,9 @@ def create_db_richard(engine_string: str) -> None:
             logger.error("Could not create the table: %s", other_error)
         else:
             logger.info("Created table.")
+
+
+
 
 # if __name__ == "__main__":
 #     try:
