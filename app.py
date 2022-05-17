@@ -6,7 +6,8 @@ import sqlalchemy.exc
 from flask import Flask, render_template, request, redirect, url_for
 
 # For setting up the Flask-SQLAlchemy database session
-from src.add_songs import Tracks, TrackManager
+#from src.add_songs import Tracks, TrackManager
+from src.create_tables_rds import QueryManager, HistoricalQueries
 
 # Initialize the Flask application
 app = Flask(__name__, template_folder="app/templates",
@@ -18,7 +19,7 @@ app.config.from_pyfile('config/flaskconfig.py')
 # Define LOGGING_CONFIG in flask_config.py - path to config file for setting
 # up the logger (e.g. config/logging/local.conf)
 logging.config.fileConfig(app.config["LOGGING_CONFIG"])
-logger = logging.getLogger(app.config["APP_NAME"])
+logger = logging.getLogger(app.config["APP_NAME"]) # Give a meaningful name to the logger in executable script
 logger.debug(
     'Web app should be viewable at %s:%s if docker run command maps local '
     'port to the same port as configured for the Docker container '
@@ -29,9 +30,11 @@ logger.debug(
     , app.config["PORT"])
 
 # Initialize the database session
-track_manager = TrackManager(app)
+query_manager = QueryManager(app)
 
 
+# Different functions that can take place in the app.
+# What function should be returned when someone goes to "/"
 @app.route('/')
 def index():
     """Main view that lists songs in the database.
@@ -45,10 +48,11 @@ def index():
     """
 
     try:
-        tracks = track_manager.session.query(Tracks).limit(
+        user_query = query_manager.session.query(HistoricalQueries).limit(
             app.config["MAX_ROWS_SHOW"]).all()
         logger.debug("Index page accessed")
-        return render_template('index.html', tracks=tracks)
+        return render_template('index.html', user_query=user_query)
+        # Return template if the search to index.html succeeds
     except sqlite3.OperationalError as e:
         logger.error(
             "Error page returned. Not able to query local sqlite database: %s."
@@ -67,20 +71,30 @@ def index():
         return render_template('error.html')
 
 
+
 @app.route('/add', methods=['POST'])
-def add_entry():
+def enter_query_parameters():
     """View that process a POST with new song input
 
     Returns:
         redirect to index page
     """
+    new_query_params = {}
+    new_query_params["temperature"] = request.form["temperature"]
+    new_query_params["cloud_percentage"] = request.form["cloud_percentage"]
+    new_query_params["year"] = request.form["year"]
+    new_query_params["month"] = request.form["month"]
+    new_query_params["day"] = request.form["day"]
+    new_query_params["hour"] = request.form["hour"]
+    new_query_params["day_of_week"] = request.form["day_of_week"]
+    new_query_params["holiday"] = request.form["holiday"]
+    new_query_params["rainfall_hour"] = request.form["rainfall_hour"]
+
 
     try:
-        track_manager.add_track(artist=request.form['artist'],
-                                album=request.form['album'],
-                                title=request.form['title'])
-        logger.info("New song added: %s by %s", request.form['title'],
-                    request.form['artist'])
+        query_manager.add_new_query(query_params=new_query_params,
+                                    query_prediction=1000) #TODO: Need to plug in model prediction
+        logger.info("Query added")
         return redirect(url_for('index'))
     except sqlite3.OperationalError as e:
         logger.error(

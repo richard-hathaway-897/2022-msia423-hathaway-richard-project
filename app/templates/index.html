@@ -7,7 +7,7 @@
 
 <body>
     <h3>
-         <a href = "{{ url_for('index') }}">Penny Lane Music Recommender</a>
+         <a href = "{{ url_for('index') }}">Traffic Predictions</a>
     </h3>
 
     <hr/>
@@ -21,20 +21,29 @@
          </thead>
 
          <tbody>
-            {% for track in tracks %}
+            {% for query in user_query %}  <!-- 'tracks' comes from the render_template in index function -->
                <tr>
-                   <td>{{ track.title }}</td>
-                   <td>{{ track.artist }}</td>
-                   <td>{{ track.album }}</td>
+                   <td>{{ query.query_number }}</td>
+                   <td>{{ query.predicted_traffic_count }}</td>
+                   <td>{{ query.hour }}</td>
+                   <td>{{ query.temperature }}</td>
+                   <td>{{ query.month }}</td>
                </tr>
             {% endfor %}
          </tbody>
       </table>
-      <form action="{{ url_for('add_entry') }}" method=post class=add-entry>
+      <form action="{{ url_for('enter_query_parameters') }}" method=post class=enter-query-parameters>
       <dl>
-        <input type=text size=15 name=title placeholder="Title">
-        <input type=text size=15 name=artist placeholder="Artist">
-        <input type=text size=15 name=album placeholder="Album">
+        <input type=text size=15 name=temperature placeholder="Temperature">
+        <input type=text size=15 name=cloud_percentage placeholder="Percentage of Cloud Cover">
+        <input type=text size=15 name=weather_description placeholder="Weather Description"> <!--make this a check box-->
+          <input type=text size=15 name=year placeholder="Year">
+        <input type=text size=15 name=month placeholder="Month">
+          <input type=text size=15 name=day placeholder="Day of Month">
+        <input type=text size=15 name=hour placeholder="Hour">
+        <input type=text size=15 name=day_of_week placeholder="Day Of Week"> <!--could be calculated from d/m/y-->
+        <input type=text size=15 name=holiday placeholder="Holiday">
+        <input type=text size=15 name=rainfall_hour placeholder="Hourly Rainfall in millimeters">
         <input type=submit value=Add>
       </dl>
     </form>
