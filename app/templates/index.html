@@ -7,16 +7,20 @@
 
 <body>
     <h3>
-         <a href = "{{ url_for('index') }}">Traffic Predictions</a>
+         <a href = "{{ url_for('index') }}">Traffic Predictions on Westbound I-94 at Minnesota DoT ATR Station 301</a>
     </h3>
 
     <hr/>
+
     <table>
          <thead>
             <tr>
-               <th>Title</th>
-               <th>Artist</th>
-               <th>Album</th>
+               <th>Query Number</th>
+               <th>Prediction</th>
+               <th>Hour</th>
+               <th>Temperature</th>
+               <th>Month</th>
+
             </tr>
          </thead>
 
@@ -31,7 +35,11 @@
                </tr>
             {% endfor %}
          </tbody>
-      </table>
+    </table>
+
+    <div id = "form_title", class = "index_headers">
+        Enter the time of day and weather conditions for your travel time.
+    </div>
       <form action="{{ url_for('enter_query_parameters') }}" method=post class=enter-query-parameters>
       <dl>
         <input type=text size=15 name=temperature placeholder="Temperature">
@@ -47,6 +55,10 @@
         <input type=submit value=Add>
       </dl>
     </form>
+
+    <div id = "prediction_title" class = "index_headers">
+        Prediction:
+    </div>
 
 </body>
 </html>
