@@ -82,6 +82,7 @@ def enter_query_parameters():
     new_query_params = {}
     new_query_params["temperature"] = request.form["temperature"]
     new_query_params["cloud_percentage"] = request.form["cloud_percentage"]
+    new_query_params["weather_description"] = request.form["weather_description"]
     new_query_params["year"] = request.form["year"]
     new_query_params["month"] = request.form["month"]
     new_query_params["day"] = request.form["day"]
