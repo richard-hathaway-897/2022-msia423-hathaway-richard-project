@@ -12,7 +12,7 @@ def clean_data(data_source: str, clean_data_path: str, delimiter: str = ","):
     try:
         traffic = src.s3_actions.s3_read(s3_source=data_source, delimiter=delimiter)
     except ValueError as value_error:
-        logger.error("Failed to read data in preprocessing.")
+        logger.error("Failed to read data in raw data for cleaning.")
         raise ValueError(value_error)
 
     traffic_before_shape = traffic.shape
@@ -26,7 +26,7 @@ def clean_data(data_source: str, clean_data_path: str, delimiter: str = ","):
     src.s3_actions.s3_write(data_source=traffic, s3_destination=clean_data_path, delimiter=delimiter)
 
 
-def generate_features(data_source: str, clean_data_path: str, delimiter = ",", **preprocess_params: dict) -> None:
+def generate_features(data_source: str, features_path: str, preprocess_params: dict, delimiter=",") -> None:
 
     try:
         traffic = src.s3_actions.s3_read(s3_source=data_source, delimiter=delimiter)
@@ -34,29 +34,48 @@ def generate_features(data_source: str, clean_data_path: str, delimiter = ",", *
         logger.error("Failed to read data in preprocessing.")
         raise ValueError(value_error)
 
+    traffic_original_shape = traffic.shape
+    logger.info("Data prior to generating features has %d records and %d columns.", traffic_original_shape[0], traffic_original_shape[1])
     traffic = create_datetime_features(traffic)
+    traffic_datetime_shape = traffic.shape
+    logger.info("After generating datetime features, the data has %d records and %d columns.", traffic_datetime_shape[0],
+                traffic_datetime_shape[1])
 
-    traffic = remove_outliers(traffic, **preprocess_params["remove_outliers"])
-#    traffic = select_training_features(traffic, **preprocess_params["select_training_features"])
 
-    for collapse_key, collapse_value in preprocess_params["collapse_weather_categories"]:
-        traffic.loc[traffic["weather_main"] == collapse_value["original_category"], "weather_main"] = collapse_value[
-            "to_category"]
+    traffic = remove_outliers(traffic, preprocess_params["remove_outliers"])
+    traffic_outlier_shape = traffic.shape
+    logger.info("After removing outliers, the data has %d records and %d columns. %d records were removed.",
+                traffic_outlier_shape[0],
+                traffic_outlier_shape[1],
+                traffic_datetime_shape[0] - traffic_outlier_shape[0])
+
+    collapse_dict = preprocess_params["collapse_weather_categories"]
+    for collapse_key in collapse_dict.keys():
+        records_to_collapse = traffic.loc[traffic["weather_main"] == collapse_dict[collapse_key]["original_category"]].shape[0]
+        traffic.loc[traffic["weather_main"] == collapse_dict[collapse_key]["original_category"], "weather_main"] = collapse_dict[collapse_key]["to_category"]
+        logger.info("Reassigned %d records with 'weather_main' category of '%s' to '%s'", records_to_collapse, collapse_dict[collapse_key]["original_category"], collapse_dict[collapse_key]["to_category"])
 
     for column_binarize in preprocess_params["binarize_columns"]:
         traffic[column_binarize + "_binary"] = traffic[column_binarize]\
             .apply(func=binarize, args=[preprocess_params["binarize_zero_value"]])
+        logger.info("Binarized column %s. Added column '%s_binarize' to the dataset.", column_binarize, column_binarize)
 
     for column_log in preprocess_params["log_transform_columns"]:
         traffic["log_" + column_log] = np.log1p(traffic[column_log])
+        logger.info("Log transformed column %s. Added column 'log_%s' to the dataset.", column_log, column_log)
 
-    traffic = traffic.drop([preprocess_params["drop_columns"] +
-                            preprocess_params["log_transform_columns"] +
-                            preprocess_params["binarize_columns"]], axis=1)
+    traffic = traffic.drop(list(preprocess_params["drop_columns"]) +
+                           list(preprocess_params["log_transform_columns"]) +
+                           list(preprocess_params["binarize_columns"]), axis=1)
+    logger.info("Dropped the following columns from the dataset: %s", str(list(preprocess_params["drop_columns"]) +
+                                                                          list(preprocess_params["log_transform_columns"]) +
+                                                                          list(preprocess_params["binarize_columns"])))
 
     traffic = traffic.reset_index(drop=True)
+    traffic_final_shape = traffic.shape
+    logger.info("Finished generating features. Final dataset contains %d records and %d columns", traffic_final_shape[0], traffic_final_shape[1])
 
-    src.s3_actions.s3_write(data_source=traffic, s3_destination=clean_data_path, delimiter=delimiter)
+    src.s3_actions.s3_write(data_source=traffic, s3_destination=features_path, delimiter=delimiter)
 
 
 # def select_training_features(data: pd.DataFrame, **select_training_features_params: dict) -> pd.DataFrame:
@@ -75,19 +94,19 @@ def generate_features(data_source: str, clean_data_path: str, delimiter = ",", *
 #     return data
 #
 
-def remove_outliers(data: pd.DataFrame, **remove_outlier_params: dict) -> pd.DataFrame:
+def remove_outliers(data: pd.DataFrame, remove_outlier_params: dict) -> pd.DataFrame:
     # TODO: Check to make sure these columns exist in the dataframe.
     data = data[data["temp"] >= remove_outlier_params["temp_min"]]
     data = data[data["temp"] <= remove_outlier_params["temp_max"]]
 
-    data = data[data["rain_1h"] >= remove_outlier_params["rain_min"]]
-    data = data[data["rain_1h"] <= remove_outlier_params["rain_max"]]
+    data = data[data["rain_1h"] >= remove_outlier_params["rain_mm_min"]]
+    data = data[data["rain_1h"] <= remove_outlier_params["rain_mm_max"]]
 
     data = data[data["clouds_all"] >= remove_outlier_params["clouds_min"]]
     data = data[data["clouds_all"] <= remove_outlier_params["clouds_max"]]
 
     data = data[data["traffic_volume"] >= remove_outlier_params["traffic_min"]]
-    data = data[data["traffic_volume"] <= remove_outlier_params["traffic_min"]]
+    data = data[data["traffic_volume"] <= remove_outlier_params["traffic_max"]]
 
     return data
 

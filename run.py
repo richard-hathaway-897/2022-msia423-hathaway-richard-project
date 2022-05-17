@@ -3,7 +3,10 @@
 import argparse
 import logging.config
 
+import yaml
+
 from config.flaskconfig import SQLALCHEMY_DATABASE_URI
+import config.config
 #from src.add_songs import create_db, add_song
 from src.create_tables_rds import create_db_richard
 from src.s3_actions import s3_write
@@ -51,12 +54,23 @@ if __name__ == '__main__':
 
     sp_clean_data = subparsers.add_parser("clean",
                                       description="Fetch raw data and save to S3")
-    sp_clean_data.add_argument("--raw_data", type=str,
+    sp_clean_data.add_argument("--data_source", type=str,
                         required=True,
                         help = "Path of the data on s3 to read from or write to.")
-    sp_clean_data.add_argument("--clean_data", type=str,
+    sp_clean_data.add_argument("--output_path", type=str,
                         help = "Local path or URL to read from or write to.")
     sp_clean_data.add_argument("--delimiter", type=str,
+                        default = ",",
+                        help = "The delimiter of the file.")
+
+    sp_generate_features = subparsers.add_parser("create_features",
+                                      description="Fetch raw data and save to S3")
+    sp_generate_features.add_argument("--data_source", type=str,
+                        required=True,
+                        help = "Path of the data on s3 to read from or write to.")
+    sp_generate_features.add_argument("--output_path", type=str,
+                        help = "Local path or URL to read from or write to.")
+    sp_generate_features.add_argument("--delimiter", type=str,
                         default = ",",
                         help = "The delimiter of the file.")
 
@@ -70,7 +84,20 @@ if __name__ == '__main__':
     elif command_choice == 'fetch':
         s3_write(s3_destination=args.path_s3, data_source=args.data_url, delimiter=args.delimiter)
     elif command_choice == 'clean':
-        src.data_preprocessing.clean_data(data_source=args.raw_data, clean_data_path=args.clean_data,
+        src.data_preprocessing.clean_data(data_source=args.data_source, clean_data_path=args.output_path,
                                           delimiter=args.delimiter)
+    elif command_choice == 'create_features':
+
+        try:
+            with open(config.config.PREPROCESSING_CONFIG_PATH, "r", encoding="utf-8") as preprocess_yaml:
+                preprocess_parameters = yaml.load(preprocess_yaml, Loader=yaml.FullLoader)
+        except FileNotFoundError:
+            logger.error("Could not locate the preprocessing configuration file specified in config.config.py: %s.",
+                         config.config.PREPROCESSING_CONFIG_PATH)
+        else:
+            src.data_preprocessing.generate_features(data_source=args.data_source,
+                                                     features_path=args.output_path,
+                                                     preprocess_params=preprocess_parameters["preprocess_data"],
+                                                     delimiter=args.delimiter)
     else:
         parser.print_help()
