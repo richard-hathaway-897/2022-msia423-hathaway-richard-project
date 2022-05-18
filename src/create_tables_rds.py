@@ -69,6 +69,7 @@ class QueryManager:
             self.session = self.database.session
         elif engine_string:
             # TODO: add exception handling
+
             engine = sqlalchemy.create_engine(engine_string)
             session_maker = sqlalchemy.orm.sessionmaker(bind=engine)
             self.session = session_maker()
@@ -84,7 +85,8 @@ class QueryManager:
         self.session.close()
 
     def add_new_query(self, query_params: dict, query_prediction: float) -> None:
-        """
+        """Add a new query to the Historical Queries table
+
 
         """
 
@@ -121,7 +123,6 @@ def create_db_richard(engine_string: str) -> None:
     # Make sure the environment variable exists
     if engine_string is None:
         logger.error("Environment variable SQLALCHEMY_DATABASE_URI does not exist.")
-
 
     # Try to create the sqlalchemy engine.
     try:
