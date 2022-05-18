@@ -81,8 +81,11 @@ if __name__ == '__main__':
     sp_generate_features.add_argument("--data_source", type=str,
                         required=True,
                         help = "Path of the data on s3 to read from or write to.")
-    # sp_generate_features.add_argument("--output_path", type=str,
-    #                     help = "Local path or URL to read from or write to.")
+    sp_generate_features.add_argument("--output_path_local", type=str,
+                                      default = "./models/trained_model_object.joblib",
+                                      help="Local path or URL to read from or write to.")
+    sp_generate_features.add_argument("--output_path_s3", type=str,
+                                      help="Local path or URL to read from or write to.")
     sp_generate_features.add_argument("--delimiter", type=str,
                         default = ",",
                         help = "The delimiter of the file.")
@@ -102,17 +105,28 @@ if __name__ == '__main__':
     elif command_choice == 'create_features':
 
         try:
-            with open(config.config.PREPROCESSING_CONFIG_PATH, "r", encoding="utf-8") as preprocess_yaml:
+            with open(config.config.MODEL_CONFIG_PATH, "r", encoding="utf-8") as preprocess_yaml:
                 preprocess_parameters = yaml.load(preprocess_yaml, Loader=yaml.FullLoader)
         except FileNotFoundError:
-            logger.error("Could not locate the preprocessing configuration file specified in config.config.py: %s.",
-                         config.config.PREPROCESSING_CONFIG_PATH)
+            logger.error("Could not locate the model configuration file specified in config.config.py: %s.",
+                         config.config.MODEL_CONFIG_PATH)
         else:
             src.data_preprocessing.generate_features(data_source=args.data_source,
                                                      features_path=args.output_path,
                                                      preprocess_params=preprocess_parameters["preprocess_data"],
                                                      delimiter=args.delimiter)
     elif command_choice == 'train_model':
-        src.train_model.train_model(model_data_source=args.data_source, delimiter = args.delimiter)
+        try:
+            with open(config.config.MODEL_CONFIG_PATH, "r", encoding="utf-8") as preprocess_yaml:
+                preprocess_parameters = yaml.load(preprocess_yaml, Loader=yaml.FullLoader)
+        except FileNotFoundError:
+            logger.error("Could not locate the model configuration file specified in config.config.py: %s.",
+                         config.config.MODEL_CONFIG_PATH)
+        else:
+            src.train_model.train_model(model_data_source=args.data_source,
+                                        model_training_params=preprocess_parameters["model_training"],
+                                        model_output_local_path=args.output_path_local,
+                                        model_output_s3_path = args.output_path_s3,
+                                        delimiter=args.delimiter)
     else:
         parser.print_help()

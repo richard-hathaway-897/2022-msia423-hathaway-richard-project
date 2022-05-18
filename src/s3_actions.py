@@ -5,6 +5,7 @@ import typing
 
 import botocore.exceptions
 import pandas as pd
+import boto3
 
 logger = logging.getLogger(__name__)
 
@@ -166,6 +167,50 @@ def s3_read(s3_source: str, delimiter: str = ",") -> pd.DataFrame:
             #raise ValueError("Could not read data from AWS S3, returning empty dataframe.")
 
     return data
+
+def get_bucket_s3path(path_s3: str) -> dict:
+
+    path_s3_split = path_s3.split("/", 3)
+    bucket_name = path_s3_split[2]
+    file_path = path_s3_split[3]
+
+    s3_dict = {'bucket_name': bucket_name, 'file_path': file_path}
+    return s3_dict
+
+def s3_write_from_file(data_source: str, path_s3: str):
+
+    s3_dict = get_bucket_s3path(path_s3)
+    s3 = boto3.resource("s3")
+    bucket = s3.Bucket(s3_dict["bucket_name"])
+
+    # TODO: Add exception handling
+    try:
+        bucket.upload_file(data_source, s3_dict["file_path"])
+    except botocore.exceptions.NoCredentialsError as no_credentials_error:
+        logger.error("Could not write file to AWS S3 bucket. "
+                     "Ensure the environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are activated."
+                     "Error: %s", no_credentials_error)
+    else:
+        logger.info("Successfully uploaded file '%s' to '%s'.", data_source, path_s3)
+
+def s3_read_from_file(path_s3: str, output_path: str):
+
+    s3_dict = get_bucket_s3path(path_s3)
+    s3 = boto3.resource("s3")
+    bucket = s3.Bucket(s3_dict["bucket_name"])
+
+    # TODO: Add exception handling
+
+    try:
+        bucket.download_file(s3_dict["file_path"], output_path)
+    except botocore.exceptions.NoCredentialsError as no_credentials_error:
+        logger.error("Could not download file from AWS S3 bucket. "
+                     "Ensure the environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are activated."
+                     "Error: %s", no_credentials_error)
+    else:
+        logger.info("Successfully downloaded file '%s' to '%s'.", path_s3, output_path)
+
+
 
 
 if __name__ == "__main__":
