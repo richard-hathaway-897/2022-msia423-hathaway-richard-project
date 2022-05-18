@@ -1,0 +1,65 @@
+preprocess_data:
+  drop_columns:
+    - "snow_1h"
+    - "weather_description"
+    - "date_time"
+  one_hot_encode_columns:
+    - "weather_main"
+    - "month"
+    - "hour"
+    - "day_of_week"
+    - "year"
+  log_transform_columns:
+    - "rain_1h"
+  binarize_columns:
+    - "holiday"
+  binarize_zero_value: "None"
+  remove_outliers:
+    temp_min: 210
+    temp_max: 330
+    rain_mm_min: 0
+    rain_mm_max: 1000
+    traffic_min: 100
+    traffic_max: 10000
+    clouds_min: 0
+    clouds_max: 100
+  collapse_weather_categories:
+    collapse_1:
+      original_category: "Squall"
+      to_category: "Thunderstorm"
+    collapse_2:
+      original_category: "Smoke"
+      to_category: "Haze"
+
+model_training:
+  response_column: "traffic_volume"
+  train_test_split:
+    test_size: 0.2
+    random_state: 24
+    shuffle: True
+  random_forest:
+    n_estimators: 200
+    criterion: "squared_error"
+    min_samples_split: 5
+    max_features: "sqrt"
+    oob_score: True
+    n_jobs: -1
+
+
+
+  subset_data:
+    columns:
+      - name
+      - grade
+  clean_missing:
+    value:
+      name: unknown
+      grade: -1
+  reorder:
+    by: name
+    ascending: False
+  description: some long description can go here
+  tags:
+    - tag1
+    - tag2
+    - tag3

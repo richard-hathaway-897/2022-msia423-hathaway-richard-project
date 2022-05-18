@@ -1,1 +1,1 @@
-PREPROCESSING_CONFIG_PATH = "./config/local/preprocessing_config.yaml"
+PREPROCESSING_CONFIG_PATH = "./config/model_config.yaml"
