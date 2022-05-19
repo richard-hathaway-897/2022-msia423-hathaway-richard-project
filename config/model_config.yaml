@@ -3,12 +3,12 @@ preprocess_data:
     - "snow_1h"
     - "weather_description"
     - "date_time"
+    - "year"
   one_hot_encode_columns:
     - "weather_main"
     - "month"
     - "hour"
     - "day_of_week"
-    - "year"
   log_transform_columns:
     - "rain_1h"
   binarize_columns:
