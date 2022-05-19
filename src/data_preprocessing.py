@@ -4,6 +4,7 @@ import typing
 import numpy as np
 import pandas as pd
 import sklearn.preprocessing
+import joblib
 
 import src.s3_actions
 
@@ -28,7 +29,13 @@ def clean_data(data_source: str, clean_data_path: str, delimiter: str = ","):
     src.s3_actions.s3_write(data_source=traffic, s3_destination=clean_data_path, delimiter=delimiter)
 
 
-def generate_features(data_source: str, features_path: str, preprocess_params: dict, delimiter=",") -> None:
+def generate_features(data_source: str,
+                      features_path: str,
+                      ohe_path: str,
+                      ohe_path_s3: str,
+                      ohe_to_s3: bool,
+                      preprocess_params: dict,
+                      delimiter=",") -> None:
 
     try:
         traffic = src.s3_actions.s3_read(s3_source=data_source, delimiter=delimiter)
@@ -75,7 +82,8 @@ def generate_features(data_source: str, features_path: str, preprocess_params: d
 
 
     traffic = traffic.reset_index(drop=True)
-    traffic = one_hot_encoding(traffic, preprocess_params["one_hot_encode_columns"])
+    #print(traffic.head(20))
+    traffic = one_hot_encoding(traffic, preprocess_params["one_hot_encode_columns"], ohe_path, ohe_path_s3, ohe_to_s3)
     traffic_final_shape = traffic.shape
     logger.info("Finished generating features. Final dataset contains %d records and %d columns", traffic_final_shape[0], traffic_final_shape[1])
 
@@ -140,7 +148,7 @@ def binarize(value: str, zero_value: str) -> int:
     # TODO: Is this hardcoding?
 
 
-def one_hot_encoding(data: pd.DataFrame, one_hot_encode_columns: typing.List) -> pd.DataFrame:
+def one_hot_encoding(data: pd.DataFrame, one_hot_encode_columns: typing.List, ohe_path: str, ohe_path_s3: str, ohe_to_s3: bool) -> pd.DataFrame:
 
     logger.info("Prior to One Hot Encoding, data has %d columns.", data.shape[1])
     logger.info("Number of NA values: %d", data.isna().sum().sum())
@@ -157,6 +165,12 @@ def one_hot_encoding(data: pd.DataFrame, one_hot_encode_columns: typing.List) ->
     # TODO: CHECK FOR NULL VALUES!!!
 
     logger.info("Number of NA values: %d", data_one_hot_encoded.isna().sum().sum())
+
+    joblib.dump(one_hot_encoder, ohe_path)
+
+    if ohe_to_s3:
+        src.s3_actions.s3_write_from_file(ohe_path, ohe_path_s3)
+
     return data_one_hot_encoded
 
 # Check for duplicates
