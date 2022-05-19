@@ -29,9 +29,7 @@ class HistoricalQueries(Base):
     temperature = Column(Float, unique=False, nullable=False) # Temperature
     cloud_percentage = Column(Integer, unique=False, nullable=False) # Percentage of Cloud Cover
     weather_description = Column(String(30), unique=False, nullable=False) # Descriptor of the weather ("Clear", "Thunderstorm", etc.)
-    year = Column(Integer, unique = False, nullable = False) # Year
     month = Column(Integer, unique = False, nullable = False) # Month
-    day = Column(Integer, unique = False, nullable = False) # Day
     hour = Column(Integer, unique = False, nullable = False) # Hour
     day_of_week = Column(String(15), unique = False, nullable = False) # Day of week
     holiday = Column(Integer, unique = False, nullable = False)  # Holiday, binary 1 or 0 indicating if there is a holiday
@@ -45,9 +43,7 @@ class HistoricalQueries(Base):
               f"Temperature: {self.temperature} \n"
               f"Cloud_Percentage: {self.cloud_percentage} \n"
               f"Weather_Description: {self.weather_description} \n"
-              f"Year: {self.year} \n"
               f"Month: {self.month} \n"
-              f"Day: {self.day} \n"
               f"Day_Of_Week: {self.day_of_week} \n"
               f"Holiday: {self.holiday} \n"
               f"Rainfall_Hour: {self.rainfall_hour}")
@@ -96,16 +92,14 @@ class QueryManager:
         session = self.session
         user_query = HistoricalQueries(query_count=1,
                                        predicted_traffic_count=query_prediction,
-                                       temperature=query_params["temperature"],
+                                       temperature=query_params["temp"],
                                        cloud_percentage=query_params["cloud_percentage"],
                                        weather_description=query_params["weather_description"],
-                                       year=query_params["year"],
                                        month=query_params["month"],
-                                       day=query_params["day"],
                                        hour=query_params["hour"],
                                        day_of_week=query_params["day_of_week"],
                                        holiday=query_params["holiday"],
-                                       rainfall_hour=query_params["rainfall_hour"])
+                                       rainfall_hour=query_params["rain_1h"])
         # TODO: exception handling
         session.add(user_query)
         session.commit()
