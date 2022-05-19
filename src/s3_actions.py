@@ -156,6 +156,8 @@ def s3_read(s3_source: str, delimiter: str = ",") -> pd.DataFrame:
         # This exception will catch any AWS service exceptions. More information at:
         # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/error-handling.html
         logger.error("A client error occurred - could not read data from AWS S3 bucket. %s", client_error)
+    except pd.errors.EmptyDataError as empty_data:
+        logger.error("Could not parse the csv file because it is empty.")
     #except Exception as unknown_error:
         #logger.error("An unknown error occurred. Could not read data from AWS S3 bucket. %s", unknown_error)
     else:
