@@ -11,6 +11,7 @@ import yaml
 from src.create_tables_rds import QueryManager, HistoricalQueries
 import src.predict
 import config.config
+import src.validate
 
 # Initialize the Flask application
 app = Flask(__name__, template_folder="app/templates",
@@ -51,7 +52,7 @@ def index():
     """
 
     try:
-        user_query = query_manager.session.query(HistoricalQueries).limit(
+        user_query = query_manager.session.query(HistoricalQueries).order_by(app.config["ROW_SORT_BY"]).limit(
             app.config["MAX_ROWS_SHOW"]).all()
         logger.debug("Index page accessed")
         return render_template('index.html', user_query=user_query)
@@ -85,14 +86,20 @@ def enter_query_parameters():
 
     # TODO: Is hardcoding these column names bad?
     new_query_params = {}
-    new_query_params["temp"] = float(request.form["temperature"])
-    new_query_params["clouds_all"] = float(request.form["cloud_percentage"])
+    new_query_params["temp"] = request.form["temperature"]
+    new_query_params["clouds_all"] = request.form["cloud_percentage"]
     new_query_params["weather_main"] = request.form["weather_description"]
-    new_query_params["month"] = int(request.form["month"])
-    new_query_params["hour"] = int(request.form["hour"])
+    new_query_params["month"] = request.form["month"]
+    new_query_params["hour"] = request.form["hour"]
     new_query_params["day_of_week"] = request.form["day_of_week"]
     new_query_params["holiday"] = request.form["holiday"]
-    new_query_params["rain_1h"] = float(request.form["rainfall_hour"])
+    new_query_params["rain_1h"] = request.form["rainfall_hour"]
+
+    validation_result = src.validate.validate_user_input_dtype(new_query_params)
+
+    if not validation_result["data_status"]:
+        logger.error("One or more data entries had an invalid data type.")
+        return render_template('error.html')
 
     try:
         with open(config.config.MODEL_CONFIG_PATH, "r", encoding="utf-8") as preprocess_yaml:
@@ -102,35 +109,37 @@ def enter_query_parameters():
                      config.config.MODEL_CONFIG_PATH)
         return render_template('error.html')
 
-    prediction_df = src.predict.predict_preprocess(new_query_params, preprocess_parameters["preprocess_data"])
+    prediction_df = src.predict.predict_preprocess(validation_result["data"], preprocess_parameters["preprocess_data"])
     prediction = src.predict.predict(prediction_df,
-                                     model_object_path="./models/trained_model_object1.joblib",
-                                     ohe_object_path="./models/ohe_object.joblib",
-                                     s3_bool=False,
-                                     )
+                                     model_object_path=app.config["PATH_TRAINED_MODEL_OBJECT"],
+                                     ohe_object_path=app.config["PATH_TRAINED_ONE_HOT_ENCODER"],
+                                     s3_bool=False)
     logger.info("Prediction: %f", prediction[0])
 
-    try:
-        query_manager.add_new_query(query_params=new_query_params,
-                                    query_prediction=prediction[0])
-        logger.info("Query added")
+    query_count = query_manager.search_for_query_count(query_params=new_query_params)
+
+    if query_count == 0:
+
+        try:
+            query_manager.add_new_query(query_params=new_query_params,
+                                        query_prediction=prediction[0])
+            logger.info("Query added")
+            return redirect(url_for('index'))
+        except sqlite3.OperationalError as e:
+            logger.error(
+                "Error page returned. Not able to add song to local sqlite "
+                "database: %s. Error: %s ",
+                app.config['SQLALCHEMY_DATABASE_URI'], e)
+            return render_template('error.html')
+        except sqlalchemy.exc.OperationalError as e:
+            logger.error(
+                "Error page returned. Not able to add song to MySQL database: %s. "
+                "Error: %s ",
+                app.config['SQLALCHEMY_DATABASE_URI'], e)
+            return render_template('error.html')
+    else:
+        query_manager.increment_query_count(query_params=new_query_params)
         return redirect(url_for('index'))
-    except sqlite3.OperationalError as e:
-        logger.error(
-            "Error page returned. Not able to add song to local sqlite "
-            "database: %s. Error: %s ",
-            app.config['SQLALCHEMY_DATABASE_URI'], e)
-        return render_template('error.html')
-    except sqlalchemy.exc.OperationalError as e:
-        logger.error(
-            "Error page returned. Not able to add song to MySQL database: %s. "
-            "Error: %s ",
-            app.config['SQLALCHEMY_DATABASE_URI'], e)
-        return render_template('error.html')
-
-
-
-
 
 if __name__ == '__main__':
     app.run(debug=app.config["DEBUG"], port=app.config["PORT"],
