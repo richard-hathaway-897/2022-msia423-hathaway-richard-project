@@ -14,15 +14,39 @@ preprocess_data:
   binarize_columns:
     - "holiday"
   binarize_zero_value: "None"
-  remove_outliers:
+  valid_data:
     temp_min: 210
     temp_max: 330
     rain_mm_min: 0
-    rain_mm_max: 1000
+    rain_mm_max: 300
     traffic_min: 100
     traffic_max: 10000
     clouds_min: 0
     clouds_max: 100
+    weather_main_valid:
+      - "Clouds"
+      - "Clear"
+      - "Mist"
+      - "Rain"
+      - "Snow"
+      - "Drizzle"
+      - "Haze"
+      - "Thunderstorm"
+      - "Fog"
+      - "Smoke"
+      - "Squall"
+    day_of_week_valid:
+      - "Sunday"
+      - "Monday"
+      - "Tuesday"
+      - "Wednesday"
+      - "Thursday"
+      - "Friday"
+      - "Saturday"
+    month_min: 1
+    month_max: 12
+    hour_min: 0
+    hour_max: 23
   collapse_weather_categories:
     collapse_1:
       original_category: "Squall"
@@ -30,6 +54,7 @@ preprocess_data:
     collapse_2:
       original_category: "Smoke"
       to_category: "Haze"
+
 
 model_training:
   response_column: "traffic_volume"
