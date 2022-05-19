@@ -105,8 +105,38 @@ class QueryManager:
         session.commit()
         logger.info("Added query to the database.")
 
-    def search_for_query(self):
-        return
+    def search_for_query_count(self, query_params: dict):
+        session = self.session
+        query_count = session.query(HistoricalQueries).filter(HistoricalQueries.temperature == query_params["temp"],
+                                                            HistoricalQueries.cloud_percentage==query_params["clouds_all"],
+                                                            HistoricalQueries.weather_description==query_params["weather_main"],
+                                                            HistoricalQueries.month==query_params["month"],
+                                                            HistoricalQueries.hour==query_params["hour"],
+                                                            HistoricalQueries.day_of_week==query_params["day_of_week"],
+                                                            HistoricalQueries.holiday==query_params["holiday"],
+                                                            HistoricalQueries.rainfall_hour==query_params["rain_1h"]).count()
+        logger.info("%d queries matching the input parameters found", query_count)
+        return query_count
+
+    def increment_query_count(self, query_params: dict) -> int:
+        session = self.session
+        session.query(HistoricalQueries).filter(HistoricalQueries.temperature == query_params["temp"],
+                                              HistoricalQueries.cloud_percentage == query_params[
+                                                  "clouds_all"],
+                                              HistoricalQueries.weather_description == query_params[
+                                                  "weather_main"],
+                                              HistoricalQueries.month == query_params["month"],
+                                              HistoricalQueries.hour == query_params["hour"],
+                                              HistoricalQueries.day_of_week == query_params[
+                                                  "day_of_week"],
+                                              HistoricalQueries.holiday == query_params["holiday"],
+                                              HistoricalQueries.rainfall_hour == query_params[
+                                                    "rain_1h"]).update(
+                                                {"query_count": HistoricalQueries.query_count + 1})
+
+        session.commit()
+        logger.info("Record count incremented by 1")
+
 
 
 def create_db_richard(engine_string: str) -> None:
