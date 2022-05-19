@@ -108,13 +108,13 @@ Additionally, when the web application is deployed to the public, data on user s
 To build the image, run from this directory (the root of the repo): 
 
 ```bash
- docker build -f dockerfiles/Dockerfile.run -t pennylanedb .
+ docker build -f dockerfiles/Dockerfile.run -t trafficpredictiondb .
 ```
 #### Create the database 
 To create the database in the location configured in `config.py` run: 
 
 ```bash
-docker run --mount type=bind,source="$(pwd)"/data,target=/app/data/ pennylanedb create_db  --engine_string=sqlite:///data/tracks.db
+docker run --mount type=bind,source="$(pwd)"/data,target=/app/data/ trafficpredictiondb create_db  --engine_string=sqlite:///data/richard.db
 ```
 The `--mount` argument allows the app to access your local `data/` folder and save the SQLite database there so it is available after the Docker container finishes.
 
@@ -173,7 +173,7 @@ MAX_ROWS_SHOW = 100 # Limits the number of rows returned from the database
 To build the image, run from this directory (the root of the repo): 
 
 ```bash
- docker build -f dockerfiles/Dockerfile.app -t pennylaneapp .
+ docker build -f dockerfiles/Dockerfile.app -t trafficpredictionapp .
 ```
 
 This command builds the Docker image, with the tag `pennylaneapp`, based on the instructions in `dockerfiles/Dockerfile.app` and the files existing in this directory.
@@ -183,7 +183,7 @@ This command builds the Docker image, with the tag `pennylaneapp`, based on the 
 To run the Flask app, run: 
 
 ```bash
- docker run --name test-app --mount type=bind,source="$(pwd)"/data,target=/app/data/ -p 5000:5000 pennylaneapp
+ docker run --name test-app --mount type=bind,source="$(pwd)"/data,target=/app/data/ -p 5000:5000 trafficpredictionapp
 ```
 You should be able to access the app at http://127.0.0.1:5000/ in your browser (Mac/Linux should also be able to access the app at http://127.0.0.1:5000/ or localhost:5000/) .
 
