@@ -34,11 +34,11 @@ def predict_preprocess(predictors: dict, preprocess_params: dict) -> pd.DataFram
     prediction_df = src.data_preprocessing.collapse_weather_categories(prediction_df, preprocess_params)
     prediction_df = src.data_preprocessing.binarize_column(prediction_df, preprocess_params)
     prediction_df = src.data_preprocessing.log_transform(prediction_df, preprocess_params)
+    prediction_df["temp"] = src.data_preprocessing.fahrenheit_to_kelvin(prediction_df["temp"]) # TODO: Is temp hardcoded?
 
     prediction_df = prediction_df.drop(list(preprocess_params["log_transform_columns"]) +
                                         list(preprocess_params["binarize_columns"]), axis=1)
-    logger.info("Dropped the following columns from the dataset: %s", str(list(preprocess_params["drop_columns"]) +
-                                                                          list(preprocess_params[
+    logger.info("Dropped the following columns from the dataset: %s", str(list(preprocess_params[
                                                                                    "log_transform_columns"]) +
                                                                           list(preprocess_params["binarize_columns"])))
     return prediction_df

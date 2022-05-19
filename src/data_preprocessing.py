@@ -1,5 +1,6 @@
 import logging
 import typing
+import dateutil
 
 import numpy as np
 import pandas as pd
@@ -37,16 +38,21 @@ def generate_features(data_source: str,
                       preprocess_params: dict,
                       delimiter=",") -> None:
 
+
+
     try:
+        print(data_source)
         traffic = src.s3_actions.s3_read(s3_source=data_source, delimiter=delimiter)
     except ValueError as value_error:
         logger.error("Failed to read data in preprocessing.")
         raise ValueError(value_error)
 
+    print(traffic["weather_main"].value_counts())
+
     traffic_original_shape = traffic.shape
     logger.info("Data prior to generating features has %d records and %d columns.", traffic_original_shape[0], traffic_original_shape[1])
     traffic = create_datetime_features(traffic)
-    traffic = remove_outliers(traffic, preprocess_params["remove_outliers"])
+    traffic = remove_outliers(traffic, preprocess_params["valid_data"])
     traffic = collapse_weather_categories(traffic, preprocess_params)
     traffic = binarize_column(traffic, preprocess_params)
     traffic = log_transform(traffic, preprocess_params)
@@ -123,11 +129,15 @@ def remove_outliers(data: pd.DataFrame, remove_outlier_params: dict) -> pd.DataF
 
 
 def create_datetime_features(data: pd.DataFrame) -> pd.DataFrame:
-    data["date_time"] = pd.to_datetime(data["date_time"])
-    data["year"] = pd.to_datetime(data["date_time"]).dt.year
-    data["month"] = pd.to_datetime(data["date_time"]).dt.month
-    data["hour"] = pd.to_datetime(data["date_time"]).dt.hour
-    data["day_of_week"] = pd.to_datetime(data["date_time"]).dt.day_name()
+    data["date_time"] = data["date_time"] \
+            .apply(func=validate_date_time)
+    data.dropna(axis=0, subset=["date_time"], inplace=True)
+
+    data["year"] = data["date_time"].dt.year
+    data["month"] = data["date_time"].dt.month
+    data["hour"] = data["date_time"].dt.hour
+    data["day_of_week"] = data["date_time"].dt.day_name()
+
     data_shape = data.shape
     logger.info("After generating datetime features, the data has %d records and %d columns.", data_shape[0],
                 data_shape[1])
@@ -135,6 +145,16 @@ def create_datetime_features(data: pd.DataFrame) -> pd.DataFrame:
     return data
 
     # TODO: Can these "year", "month", etc. stay hardcoded?
+
+def validate_date_time(date_time_string: str):
+    try:
+        date_time = pd.to_datetime(date_time_string)
+    except dateutil.parser._parser.ParseError as invalid_date:
+        logger.error("Invalid date found, removing record. ", invalid_date)
+        return None
+    else:
+        return date_time
+
 
 
 def binarize(value: str, zero_value: str) -> int:
@@ -147,6 +167,9 @@ def binarize(value: str, zero_value: str) -> int:
         return 1
     # TODO: Is this hardcoding?
 
+def fahrenheit_to_kelvin(temp_deg_f: float) -> float:
+    kelvin = (temp_deg_f - 32) * (5/9) + 273.15
+    return kelvin
 
 def one_hot_encoding(data: pd.DataFrame, one_hot_encode_columns: typing.List, ohe_path: str, ohe_path_s3: str, ohe_to_s3: bool) -> pd.DataFrame:
 
