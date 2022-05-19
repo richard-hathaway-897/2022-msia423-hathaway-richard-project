@@ -4,10 +4,13 @@ import traceback
 
 import sqlalchemy.exc
 from flask import Flask, render_template, request, redirect, url_for
+import yaml
 
 # For setting up the Flask-SQLAlchemy database session
 #from src.add_songs import Tracks, TrackManager
 from src.create_tables_rds import QueryManager, HistoricalQueries
+import src.predict
+import config.config
 
 # Initialize the Flask application
 app = Flask(__name__, template_folder="app/templates",
@@ -79,22 +82,37 @@ def enter_query_parameters():
     Returns:
         redirect to index page
     """
+
+    # TODO: Is hardcoding these column names bad?
     new_query_params = {}
-    new_query_params["temperature"] = request.form["temperature"]
-    new_query_params["cloud_percentage"] = request.form["cloud_percentage"]
-    new_query_params["weather_description"] = request.form["weather_description"]
-    new_query_params["year"] = request.form["year"]
-    new_query_params["month"] = request.form["month"]
-    new_query_params["day"] = request.form["day"]
-    new_query_params["hour"] = request.form["hour"]
+    new_query_params["temp"] = float(request.form["temperature"])
+    new_query_params["clouds_all"] = float(request.form["cloud_percentage"])
+    new_query_params["weather_main"] = request.form["weather_description"]
+    new_query_params["month"] = int(request.form["month"])
+    new_query_params["hour"] = int(request.form["hour"])
     new_query_params["day_of_week"] = request.form["day_of_week"]
     new_query_params["holiday"] = request.form["holiday"]
-    new_query_params["rainfall_hour"] = request.form["rainfall_hour"]
+    new_query_params["rain_1h"] = float(request.form["rainfall_hour"])
 
+    try:
+        with open(config.config.MODEL_CONFIG_PATH, "r", encoding="utf-8") as preprocess_yaml:
+            preprocess_parameters = yaml.load(preprocess_yaml, Loader=yaml.FullLoader)
+    except FileNotFoundError:
+        logger.error("Could not locate the model configuration file specified in config.config.py: %s.",
+                     config.config.MODEL_CONFIG_PATH)
+        return render_template('error.html')
+
+    prediction_df = src.predict.predict_preprocess(new_query_params, preprocess_parameters["preprocess_data"])
+    prediction = src.predict.predict(prediction_df,
+                                     model_object_path="./models/trained_model_object1.joblib",
+                                     ohe_object_path="./models/ohe_object.joblib",
+                                     s3_bool=False,
+                                     )
+    logger.info("Prediction: %f", prediction[0])
 
     try:
         query_manager.add_new_query(query_params=new_query_params,
-                                    query_prediction=1000) #TODO: Need to plug in model prediction
+                                    query_prediction=prediction[0])
         logger.info("Query added")
         return redirect(url_for('index'))
     except sqlite3.OperationalError as e:
@@ -109,6 +127,9 @@ def enter_query_parameters():
             "Error: %s ",
             app.config['SQLALCHEMY_DATABASE_URI'], e)
         return render_template('error.html')
+
+
+
 
 
 if __name__ == '__main__':
