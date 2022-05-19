@@ -12,6 +12,7 @@ from src.create_tables_rds import create_db_richard
 from src.s3_actions import s3_write
 import src.data_preprocessing
 import src.train_model
+#import src.predict
 
 logging.config.fileConfig('config/logging/local.conf')
 logger = logging.getLogger('penny-lane-pipeline')
@@ -71,24 +72,63 @@ if __name__ == '__main__':
                         help = "Path of the data on s3 to read from or write to.")
     sp_generate_features.add_argument("--output_path", type=str,
                         help = "Local path or URL to read from or write to.")
+    sp_generate_features.add_argument("--one_hot_path", type=str,
+                                      default="./models/ohe_object.joblib",
+                                      help="Local path or URL to read from or write to.")
+    sp_generate_features.add_argument("--one_hot_path_s3", type=str,
+                                      help="Local path or URL to read from or write to.")
+    sp_generate_features.add_argument("--s3", action = "store_true",
+                                      help="Local path or URL to read from or write to.")
     sp_generate_features.add_argument("--delimiter", type=str,
                         default = ",",
                         help = "The delimiter of the file.")
 
 
-    sp_generate_features = subparsers.add_parser("train_model",
+    sp_train_model = subparsers.add_parser("train_model",
                                       description="Fetch raw data and save to S3")
-    sp_generate_features.add_argument("--data_source", type=str,
+    sp_train_model.add_argument("--data_source", type=str,
                         required=True,
                         help = "Path of the data on s3 to read from or write to.")
-    sp_generate_features.add_argument("--output_path_local", type=str,
+    sp_train_model.add_argument("--output_path_local", type=str,
                                       default = "./models/trained_model_object.joblib",
                                       help="Local path or URL to read from or write to.")
-    sp_generate_features.add_argument("--output_path_s3", type=str,
+    sp_train_model.add_argument("--output_path_s3", type=str,
+                                      default = "None",
                                       help="Local path or URL to read from or write to.")
-    sp_generate_features.add_argument("--delimiter", type=str,
+    sp_train_model.add_argument("--delimiter", type=str,
                         default = ",",
                         help = "The delimiter of the file.")
+
+
+    # sp_predict = subparsers.add_parser("predict",
+    #                                   description="Fetch raw data and save to S3")
+    # sp_predict.add_argument("--model_object_path", type=str,
+    #                     required=True,
+    #                     help = "Path of the data on s3 to read from or write to.")
+    # sp_predict.add_argument("--ohe_object_path", type=str,
+    #                     required=True,
+    #                     help = "Path of the data on s3 to read from or write to.")
+    # sp_predict.add_argument("--output_path", type=str,
+    #                                   default = "None",
+    #                                   help="Local path or URL to read from or write to.")
+    # sp_predict.add_argument("--s3", action = "store_true",
+    #                                   help="Local path or URL to read from or write to.")
+    # sp_predict.add_argument("--temp", type=float,
+    #                                   help="Local path or URL to read from or write to.")
+    # sp_predict.add_argument("--cloud_percentage", type=float,
+    #                                   help="Local path or URL to read from or write to.")
+    # sp_predict.add_argument("--holiday", type=int,
+    #                                   help="Local path or URL to read from or write to.")
+    # sp_predict.add_argument("--rain_1h", type=float,
+    #                                   help="Local path or URL to read from or write to.")
+    # sp_predict.add_argument("--weather", type=str,
+    #                                   help="Local path or URL to read from or write to.")
+    # sp_predict.add_argument("--month", type=str,
+    #                                   help="Local path or URL to read from or write to.")
+    # sp_predict.add_argument("--day_of_week", type=str,
+    #                                   help="Local path or URL to read from or write to.")
+    # sp_predict.add_argument("--hour", type=str,
+    #                                   help="Local path or URL to read from or write to.")
 
     args = parser.parse_args()
     command_choice = args.subparser_name
@@ -113,6 +153,9 @@ if __name__ == '__main__':
         else:
             src.data_preprocessing.generate_features(data_source=args.data_source,
                                                      features_path=args.output_path,
+                                                     ohe_path=args.one_hot_path,
+                                                     ohe_path_s3=args.one_hot_path_s3,
+                                                     ohe_to_s3=args.s3,
                                                      preprocess_params=preprocess_parameters["preprocess_data"],
                                                      delimiter=args.delimiter)
     elif command_choice == 'train_model':
@@ -126,7 +169,14 @@ if __name__ == '__main__':
             src.train_model.train_model(model_data_source=args.data_source,
                                         model_training_params=preprocess_parameters["model_training"],
                                         model_output_local_path=args.output_path_local,
-                                        model_output_s3_path = args.output_path_s3,
+                                        model_output_s3_path=args.output_path_s3,
                                         delimiter=args.delimiter)
+    # elif command_choice == 'predict':
+    #
+    #     src.predict.predict(predictors=,
+    #                         model_training_params=preprocess_parameters["model_training"],
+    #                         model_output_local_path=args.output_path_local,
+    #                         model_output_s3_path=args.output_path_s3,
+    #                         delimiter=args.delimiter)
     else:
         parser.print_help()

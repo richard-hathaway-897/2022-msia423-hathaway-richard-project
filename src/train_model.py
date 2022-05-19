@@ -1,7 +1,5 @@
 import logging
 
-import numpy as np
-import pandas as pd
 import sklearn.linear_model
 import sklearn.preprocessing
 from sklearn.ensemble import RandomForestRegressor
@@ -30,7 +28,7 @@ def train_model(model_data_source: str, model_training_params: dict, model_outpu
         raise key_error
 
     response = data[response_col]
-
+    print(predictors)
     train_test_params = model_training_params["train_test_split"]
     train_predictors, test_predictors, train_response, test_response = \
         sklearn.model_selection.train_test_split(predictors,
@@ -58,7 +56,9 @@ def train_model(model_data_source: str, model_training_params: dict, model_outpu
 
         # TODO Add option to not upload to S3 and just save locally.
         joblib.dump(rf_model, model_output_local_path)
-        src.s3_actions.s3_write_from_file(model_output_local_path, model_output_s3_path)
+
+        if model_output_s3_path is not "None":
+            src.s3_actions.s3_write_from_file(model_output_local_path, model_output_s3_path)
 
 
 
