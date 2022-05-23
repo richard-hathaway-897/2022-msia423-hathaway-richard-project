@@ -49,6 +49,21 @@ class HistoricalQueries(Base):
               f"Rainfall_Hour: {self.rainfall_hour}")
 
 
+class AppMetrics(Base):
+    """
+    This table will store the number of likes and dislikes received on the web application.
+    """
+    __tablename__ = "app_metrics"
+
+    row_id = Column(Integer, primary_key=True)
+    likes = Column(Integer, unique=False, nullable=False)   # primary key
+    dislikes = Column(Integer, unique=False, nullable=False) # Number of times the particular query has been called.
+
+    def __repr__(self):
+        print(f"Likes: {self.likes} \n"
+              f"Dislikes: {self.dislikes}")
+
+
 class QueryManager:
     """Creates a SQLAlchemy connection to the tracks table.
 
@@ -118,7 +133,7 @@ class QueryManager:
         logger.info("%d queries matching the input parameters found", query_count)
         return query_count
 
-    def increment_query_count(self, query_params: dict) -> int:
+    def increment_query_count(self, query_params: dict):
         session = self.session
         session.query(HistoricalQueries).filter(HistoricalQueries.temperature == query_params["temp"],
                                               HistoricalQueries.cloud_percentage == query_params[
@@ -137,12 +152,27 @@ class QueryManager:
         session.commit()
         logger.info("Record count incremented by 1")
 
+    def increment_like(self) -> None:
+        session = self.session
+        session.query(AppMetrics).update({"likes": AppMetrics.likes + 1})
+        session.commit()
+        logger.info("Incremented likes by 1")
 
+    def increment_dislike(self) -> None:
+        session = self.session
+        session.query(AppMetrics).update({"dislikes": AppMetrics.dislikes + 1})
+        session.commit()
+        logger.info("Incremented dislikes by 1")
+
+    def create_like_dislike(self) -> None:
+        session = self.session
+        like_dislike_row = AppMetrics(likes=0, dislikes=0)
+        # TODO: exception handling
+        session.add(like_dislike_row)
+        session.commit()
+        logger.info("Added like_dislike_row to the database.")
 
 def create_db_richard(engine_string: str) -> None:
-
-    logger.info("Richard's function")
-
 
     # Make sure the environment variable exists
     if engine_string is None:
@@ -162,24 +192,14 @@ def create_db_richard(engine_string: str) -> None:
         logger.debug("Successfully created engine.")
 
         try:
-            Base.metadata.create_all(engine)  # what is this line really doing, and what error could it return??
+            Base.metadata.create_all(engine)
         # TODO: Add another exception
         except Exception as other_error:
-            logger.error("Could not create the table: %s", other_error)
+            logger.error("Could not create the database: %s", other_error)
         else:
-            logger.info("Created table.")
+            logger.info("Created database.")
 
 
-
-
-# if __name__ == "__main__":
-#     try:
-#         Base.metadata.create_all(engine) # what is this line really doing, and what error could it return??
-#     # TODO: Add another exception
-#     except Exception as other_error:
-#         logger.error("Could not create the table: %s", other_error)
-#     else:
-#         logger.info("Created table.")
 
 
 

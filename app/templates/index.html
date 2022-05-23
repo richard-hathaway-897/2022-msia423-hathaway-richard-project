@@ -37,7 +37,7 @@
          </tbody>
     </table>
 
-    <div id = "form_title", class = "index_headers">
+    <div id = "form_title" class = "index_headers">
         Enter the time of day and weather conditions for your travel time.
     </div>
       <form action="{{ url_for('enter_query_parameters') }}" method=post class=enter-query-parameters>
@@ -57,6 +57,35 @@
     <div id = "prediction_title" class = "index_headers">
         Prediction:
     </div>
+    <div>
+        <table>
+            <thead>
+                <tr>
+                   <th>Likes</th>
+                   <th>Dislikes</th>
+                </tr>
+
+            </thead>
+            <tbody>
+                {% for like_dislike in like_dislike_count %}
+                   <tr>
+                       <td>{{ like_dislike.likes }}</td>
+                       <td>{{ like_dislike.dislikes }}</td>
+                   </tr>
+                {% endfor %}
+         </tbody>
+        </table>
+
+
+    </div>
+    <div id = "user_feedback">
+        <form action="{{ url_for('increment_like_dislike') }}" method=post class="increment_like_dislike">
+            <input type=submit name=choice value=Like>
+            <input type=submit name=choice value=Dislike>
+        </form>
+    </div>
+
+
 
 </body>
 </html>

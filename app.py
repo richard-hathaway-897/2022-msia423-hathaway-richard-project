@@ -8,7 +8,7 @@ import yaml
 
 # For setting up the Flask-SQLAlchemy database session
 #from src.add_songs import Tracks, TrackManager
-from src.create_tables_rds import QueryManager, HistoricalQueries
+from src.create_tables_rds import QueryManager, HistoricalQueries, AppMetrics
 import src.predict
 import config.config
 import src.validate
@@ -55,7 +55,7 @@ def index():
         user_query = query_manager.session.query(HistoricalQueries).order_by(app.config["ROW_SORT_BY"]).limit(
             app.config["MAX_ROWS_SHOW"]).all()
         logger.debug("Index page accessed")
-        return render_template('index.html', user_query=user_query)
+
         # Return template if the search to index.html succeeds
     except sqlite3.OperationalError as e:
         logger.error(
@@ -73,15 +73,34 @@ def index():
         traceback.print_exc()
         logger.error("Not able to display tracks, error page returned")
         return render_template('error.html')
+    else:
+        try:
+            like_dislike_count = query_manager.session.query(AppMetrics).all()
+        except sqlite3.OperationalError as e:
+            logger.error(
+                "Error page returned. Not able to query local sqlite database: %s."
+                " Error: %s ",
+                app.config['SQLALCHEMY_DATABASE_URI'], e)
+            return render_template('error.html')
+        except sqlalchemy.exc.OperationalError as e:
+            logger.error(
+                "Error page returned. Not able to query MySQL database: %s. "
+                "Error: %s ",
+                app.config['SQLALCHEMY_DATABASE_URI'], e)
+            return render_template('error.html')
+        except:
+            traceback.print_exc()
+            logger.error("Not able to display tracks, error page returned")
+            return render_template('error.html')
+        else:
+            logger.debug("Index page accessed")
+            return render_template('index.html', user_query=user_query, like_dislike_count=like_dislike_count)
 
 
 
 @app.route('/add', methods=['POST'])
 def enter_query_parameters():
-    """View that process a POST with new song input
-
-    Returns:
-        redirect to index page
+    """
     """
 
     # TODO: Is hardcoding these column names bad?
@@ -140,6 +159,25 @@ def enter_query_parameters():
     else:
         query_manager.increment_query_count(query_params=new_query_params)
         return redirect(url_for('index'))
+
+
+@app.route('/like', methods=['POST'])
+def increment_like_dislike():
+    """
+    """
+    logger.info("Starting")
+    if query_manager.session.query(AppMetrics).count() == 0:
+        query_manager.create_like_dislike()
+
+    if request.form["choice"] == "Like":
+        query_manager.increment_like()
+        logger.info("Incremented like")
+    else:
+        query_manager.increment_dislike()
+        logger.info("Incremented dislike")
+    return redirect(url_for('index'))
+
+
 
 if __name__ == '__main__':
     app.run(debug=app.config["DEBUG"], port=app.config["PORT"],
