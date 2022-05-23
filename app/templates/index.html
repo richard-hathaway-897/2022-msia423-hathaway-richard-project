@@ -6,37 +6,16 @@
 </head>
 
 <body>
-    <h3>
+    <h2>
          <a href = "{{ url_for('index') }}">Traffic Predictions on Westbound I-94 at Minnesota DoT ATR Station 301</a>
-    </h3>
+    </h2>
 
     <hr/>
 
-    <table>
-         <thead>
-            <tr>
-               <th>Query Number</th>
-               <th>Prediction</th>
-               <th>Hour</th>
-               <th>Temperature</th>
-               <th>Month</th>
 
-            </tr>
-         </thead>
-
-         <tbody>
-            {% for query in user_query %}  <!-- 'tracks' comes from the render_template in index function -->
-               <tr>
-                   <td>{{ query.query_number }}</td>
-                   <td>{{ query.predicted_traffic_count }}</td>
-                   <td>{{ query.hour }}</td>
-                   <td>{{ query.temperature }}</td>
-                   <td>{{ query.month }}</td>
-               </tr>
-            {% endfor %}
-         </tbody>
-    </table>
-
+    <h3>
+        Predict traffic
+    </h3>
     <div id = "form_title" class = "index_headers">
         Enter the time of day and weather conditions for your travel time.
     </div>
@@ -50,19 +29,73 @@
         <input type=text size=15 name=day_of_week placeholder="Day Of Week"> <!--could be calculated from d/m/y-->
         <input type=text size=15 name=holiday placeholder="Holiday">
         <input type=text size=15 name=rainfall_hour placeholder="Hourly Rainfall in millimeters">
-        <input type=submit value=Add>
+        <input type=submit value=Add class="submit_button">
       </dl>
     </form>
 
     <div id = "prediction_title" class = "index_headers">
-        Prediction:
+        Prediction: <span>{{ prediction }}</span>
+    </div>
+    <div id = "traffic_level">
+        Predicted Traffic Level: <span>{{ traffic_level }}</span>
+    </div>
+
+    </hr>
+
+    <div id="top_10">
+        <h3>
+            Top 10 Most Popular Queries
+        </h3>
+        <table>
+             <thead>
+                <tr>
+                   <th>Query Count</th>
+                   <th>Predicted Traffic</th>
+                   <th>Month</th>
+                   <th>Day Of Week</th>
+                   <th>Hour</th>
+                   <th>Holiday</th>
+                   <th>Temperature</th>
+                   <th>Cloud Percentage</th>
+                   <th>Weather</th>
+                   <th>Hourly Rainfall (mm)</th>
+
+                </tr>
+             </thead>
+
+             <tbody>
+                {% for query in user_query %}  <!-- 'tracks' comes from the render_template in index function -->
+                   <tr>
+                       <td>{{ query.query_count }}</td>
+                       <td>{{ query.predicted_traffic_count }}</td>
+                       <td>{{ query.month }}</td>
+                       <td>{{ query.day_of_week }}</td>
+                       <td>{{ query.hour }}</td>
+                       <td>{{ query.holiday }}</td>
+                       <td>{{ query.temperature }}</td>
+                       <td>{{ query.cloud_percentage }}</td>
+                       <td>{{ query.weather_description }}</td>
+                       <td>{{ query.rainfall_hour }}</td>
+                   </tr>
+                {% endfor %}
+             </tbody>
+        </table>
+    </div>
+    <h5>
+        Let us know how you liked the application!
+    </h5>
+    <div id = "user_feedback">
+        <form action="{{ url_for('increment_like_dislike') }}" method=post class="increment_like_dislike">
+            <input type=submit name=choice value=Like class="submit_button">
+            <input type=submit name=choice value=Dislike class="submit_button">
+        </form>
     </div>
     <div>
         <table>
             <thead>
                 <tr>
-                   <th>Likes</th>
-                   <th>Dislikes</th>
+                   <th>Total Likes</th>
+                   <th>Total Dislikes</th>
                 </tr>
 
             </thead>
@@ -78,12 +111,7 @@
 
 
     </div>
-    <div id = "user_feedback">
-        <form action="{{ url_for('increment_like_dislike') }}" method=post class="increment_like_dislike">
-            <input type=submit name=choice value=Like>
-            <input type=submit name=choice value=Dislike>
-        </form>
-    </div>
+
 
 
 

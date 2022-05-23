@@ -40,7 +40,7 @@ query_manager = QueryManager(app)
 # Different functions that can take place in the app.
 # What function should be returned when someone goes to "/"
 @app.route('/')
-def index():
+def index(prediction: float = 0):
     """Main view that lists songs in the database.
 
     Create view into index page that uses data queried from Track database and
@@ -52,7 +52,7 @@ def index():
     """
 
     try:
-        user_query = query_manager.session.query(HistoricalQueries).order_by(app.config["ROW_SORT_BY"]).limit(
+        user_query = query_manager.session.query(HistoricalQueries).order_by((app.config["ROW_SORT_BY"])).limit(
             app.config["MAX_ROWS_SHOW"]).all()
         logger.debug("Index page accessed")
 
@@ -94,7 +94,7 @@ def index():
             return render_template('error.html')
         else:
             logger.debug("Index page accessed")
-            return render_template('index.html', user_query=user_query, like_dislike_count=like_dislike_count)
+            return render_template('index.html', user_query=user_query, like_dislike_count=like_dislike_count, prediction=prediction, traffic_level="Light")
 
 
 
@@ -143,7 +143,7 @@ def enter_query_parameters():
             query_manager.add_new_query(query_params=new_query_params,
                                         query_prediction=prediction[0])
             logger.info("Query added")
-            return redirect(url_for('index'))
+            return redirect(url_for('index', prediction=prediction[0]))
         except sqlite3.OperationalError as e:
             logger.error(
                 "Error page returned. Not able to add song to local sqlite "
@@ -158,7 +158,7 @@ def enter_query_parameters():
             return render_template('error.html')
     else:
         query_manager.increment_query_count(query_params=new_query_params)
-        return redirect(url_for('index'))
+        return redirect(url_for('index', prediction=prediction[0]))
 
 
 @app.route('/like', methods=['POST'])
@@ -178,6 +178,13 @@ def increment_like_dislike():
     return redirect(url_for('index'))
 
 
+def classify_traffic(traffic_prediction: float) -> str:
+    if traffic_prediction < 2000:
+        return "light"
+    elif traffic_prediction < 3000:
+        return "moderate"
+    else:
+        return "heavy"
 
 if __name__ == '__main__':
     app.run(debug=app.config["DEBUG"], port=app.config["PORT"],
