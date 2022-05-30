@@ -1,29 +1,31 @@
-preprocess_data:
-  drop_columns:
-    - "snow_1h"
-    - "weather_description"
-    - "date_time"
-    - "year"
-  one_hot_encode_columns:
-    - "weather_main"
-    - "month"
-    - "hour"
-    - "day_of_week"
-  log_transform_columns:
-    - "rain_1h"
-  binarize_columns:
-    - "holiday"
-  binarize_zero_value: "None"
-  valid_data:
+clean_data:
+  duplicated_method: "first"
+validate:
+  duplicated_method: "first"
+remove_outliers:
+  feature_columns:
+    response_column: "traffic_volume"
+    month_column: "month"
+    hour_column: "hour"
+    day_of_week_column: "day_of_week"
+    temperature_column: "temp"
+    clouds_column: "clouds_all"
+    weather_column: "weather_main"
+    rain_column: "log_rain_1h"
+  valid_values:
     temp_min: 210
     temp_max: 330
     rain_mm_min: 0
     rain_mm_max: 300
-    traffic_min: 100
-    traffic_max: 10000
     clouds_min: 0
     clouds_max: 100
-    weather_main_valid:
+    hours_min: 0
+    hours_max: 23
+    month_min: 1
+    month_max: 12
+    response_min: 100
+    response_max: 10000
+    valid_weather:
       - "Clouds"
       - "Clear"
       - "Mist"
@@ -35,7 +37,7 @@ preprocess_data:
       - "Fog"
       - "Smoke"
       - "Squall"
-    day_of_week_valid:
+    valid_week_days:
       - "Sunday"
       - "Monday"
       - "Tuesday"
@@ -43,17 +45,44 @@ preprocess_data:
       - "Thursday"
       - "Friday"
       - "Saturday"
-    month_min: 1
-    month_max: 12
-    hour_min: 0
-    hour_max: 23
-  collapse_weather_categories:
+generate_features:
+  drop_columns:
+    - "snow_1h"
+    - "weather_description"
+    - "date_time"
+  create_datetime_features_params:
+    original_datetime_column: "date_time"
+    month_column: "month"
+    hour_column: "hour"
+    day_of_week_column: "day_of_week"
+  log_transform_params:
+    log_transform_column_names:
+      - "rain_1h"
+    log_transform_new_column_prefix: "log_"
+  binarize_column_params:
+    binarize_column_names:
+      - "holiday"
+    binarize_new_column_prefix: "binarize_"
+    binarize_zero_value: "None"
+  collapse_weather_categories_params:
     collapse_1:
       original_category: "Squall"
       to_category: "Thunderstorm"
     collapse_2:
       original_category: "Smoke"
       to_category: "Haze"
+  one_hot_encoding_params:
+    one_hot_encode_columns:
+      - "weather_main"
+      - "month"
+      - "hour"
+      - "day_of_week"
+    drop: "first"
+    sparse: False
+  train_test_split_params:
+    test_size: 0.2
+    random_state: 24
+    shuffle: True
 
 
 model_training:
@@ -69,22 +98,3 @@ model_training:
     max_features: "sqrt"
     oob_score: True
     n_jobs: -1
-
-
-
-  subset_data:
-    columns:
-      - name
-      - grade
-  clean_missing:
-    value:
-      name: unknown
-      grade: -1
-  reorder:
-    by: name
-    ascending: False
-  description: some long description can go here
-  tags:
-    - tag1
-    - tag2
-    - tag3
