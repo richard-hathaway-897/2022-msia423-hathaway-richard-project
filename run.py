@@ -7,170 +7,152 @@ import yaml
 
 from config.flaskconfig import SQLALCHEMY_DATABASE_URI
 import config.config
-#from src.add_songs import create_db, add_song
-from src.create_tables_rds import create_db_richard
-from src.s3_actions import s3_write
+from src.create_tables_rds import create_db
 import src.data_preprocessing
 import src.train_model
 #import src.predict
+import src.orchestrate
+import src.read_write_functions
 
 logging.config.fileConfig('config/logging/local.conf')
 logger = logging.getLogger('penny-lane-pipeline')
 
 if __name__ == '__main__':
 
-    # Add parsers for both creating a database and adding songs to it
-    parser = argparse.ArgumentParser(
-        description="Create and/or add data to database")
-    subparsers = parser.add_subparsers(dest='subparser_name')
+    parser = argparse.ArgumentParser(description="Run the traffic prediction database creation, data ingestion,"
+                                                 " and model pipeline.")
+    # Define the subparsers
+    subparsers = parser.add_subparsers(dest="action")
+    create_db_subparser = subparsers.add_parser("create_db", description="Create database")
+    initialize_tables_subparser = subparsers.add_parser("initialize_tables",
+                                                        description="Clear tables in the database and "
+                                                                    "recreate the initial states of tables.")
+    fetch_data_subparser = subparsers.add_parser("fetch", description="Fetch the raw data.")
+    clean_data_subparser = subparsers.add_parser("clean", description="Clean the raw data.")
+    generate_features_subparser = subparsers.add_parser("generate_features", description="Generate model features.")
+    train_model_subparser = subparsers.add_parser("train_model", description="Train model.")
+    score_model_subparser = subparsers.add_parser("score_model",
+                                                  description="Score the model (make predictions using the model).")
+    evaluate_subparser = subparsers.add_parser("evaluate_performance",
+                                               description="Calculate model performance metrics.")
 
-    # Sub-parser for creating a database
-    sp_create = subparsers.add_parser("create_db",
-                                      description="Create database")
-    sp_create.add_argument("--engine_string", default=SQLALCHEMY_DATABASE_URI,
-                           help="SQLAlchemy connection URI for database")
+    # Create DB subparser
+    create_db_subparser.add_argument("--engine_string",
+                                     default=SQLALCHEMY_DATABASE_URI,
+                                     help="SQLALCHEMY DATABASE URI connection string.")
 
-    # Sub-parser for ingesting new data
-    sp_ingest = subparsers.add_parser("ingest",
-                                      description="Add data to database")
-    sp_ingest.add_argument("--artist", default="Emancipator",
-                           help="Artist of song to be added")
-    sp_ingest.add_argument("--title", default="Minor Cause",
-                           help="Title of song to be added")
-    sp_ingest.add_argument("--album", default="Dusk to Dawn",
-                           help="Album of song being added")
-    sp_ingest.add_argument("--engine_string",
-                           default='sqlite:///data/tracks.db',
-                           help="SQLAlchemy connection URI for database")
-
-    sp_fetch_raw_data = subparsers.add_parser("fetch",
-                                      description="Fetch raw data and save to S3")
-    sp_fetch_raw_data.add_argument("--path_s3", type=str,
-                        required=True,
-                        help = "Path of the data on s3 to read from or write to.")
-    sp_fetch_raw_data.add_argument("--data_url", type=str,
-                        help = "Local path or URL to read from or write to.")
-    sp_fetch_raw_data.add_argument("--delimiter", type=str,
-                        default = ",",
-                        help = "The delimiter of the file.")
-
-    sp_clean_data = subparsers.add_parser("clean",
-                                      description="Fetch raw data and save to S3")
-    sp_clean_data.add_argument("--data_source", type=str,
-                        required=True,
-                        help = "Path of the data on s3 to read from or write to.")
-    sp_clean_data.add_argument("--output_path", type=str,
-                        help = "Local path or URL to read from or write to.")
-    sp_clean_data.add_argument("--delimiter", type=str,
-                        default = ",",
-                        help = "The delimiter of the file.")
-
-    sp_generate_features = subparsers.add_parser("create_features",
-                                      description="Fetch raw data and save to S3")
-    sp_generate_features.add_argument("--data_source", type=str,
-                        required=True,
-                        help = "Path of the data on s3 to read from or write to.")
-    sp_generate_features.add_argument("--output_path", type=str,
-                        help = "Local path or URL to read from or write to.")
-    sp_generate_features.add_argument("--one_hot_path", type=str,
-                                      default="./models/ohe_object.joblib",
+    # Initialize RDS Tables SubParser
+    initialize_tables_subparser.add_argument("--engine_string",
+                                             default=SQLALCHEMY_DATABASE_URI,
+                                             help="SQLALCHEMY DATABASE URI connection string.")
+    # Fetch Data subparser
+    fetch_data_subparser.add_argument("--path_s3", type=str,
+                                      required=True,
+                                      help="Path of the data on s3 to write to.")
+    fetch_data_subparser.add_argument("--data_url", type=str,
                                       help="Local path or URL to read from or write to.")
-    sp_generate_features.add_argument("--one_hot_path_s3", type=str,
-                                      help="Local path or URL to read from or write to.")
-    sp_generate_features.add_argument("--s3", action = "store_true",
-                                      help="Local path or URL to read from or write to.")
-    sp_generate_features.add_argument("--delimiter", type=str,
-                        default = ",",
-                        help = "The delimiter of the file.")
 
+    # Clean Data subparser
+    clean_data_subparser.add_argument("--config_path", type=str,
+                                      default="./config/model_config.yaml",
+                                      help="Location of the pipeline configuration yaml file.")
+    clean_data_subparser.add_argument("--input_source", type=str,
+                                      required=True,
+                                      help="Location of the input data file.")
+    clean_data_subparser.add_argument("--output_path", type=str,
+                                      required=True, help="Location of the clean data output file.")
 
-    sp_train_model = subparsers.add_parser("train_model",
-                                      description="Fetch raw data and save to S3")
-    sp_train_model.add_argument("--data_source", type=str,
-                        required=True,
-                        help = "Path of the data on s3 to read from or write to.")
-    sp_train_model.add_argument("--output_path_local", type=str,
-                                      default = "./models/trained_model_object.joblib",
-                                      help="Local path or URL to read from or write to.")
-    sp_train_model.add_argument("--output_path_s3", type=str,
-                                      default = "None",
-                                      help="Local path or URL to read from or write to.")
-    sp_train_model.add_argument("--delimiter", type=str,
-                        default = ",",
-                        help = "The delimiter of the file.")
+    # Generate Features Subparser
+    generate_features_subparser.add_argument("--config_path", type=str,
+                                             default="./config/model_config/pipeline_config.yaml",
+                                             help="Location of the pipeline configuration yaml file.")
+    generate_features_subparser.add_argument("--input_source", type=str,
+                                             required=True,
+                                             help="Path of the cleaned data to read from.")
+    generate_features_subparser.add_argument("--one_hot_path", type=str,
+                                             default="./models/ohe_object.joblib",
+                                             help="Local path to which to save the one_hot_encoder.")
+    generate_features_subparser.add_argument("--train_output_source", type=str,
+                                             required=True,
+                                             help="Location of the output file for the training data.")
+    generate_features_subparser.add_argument("--test_output_source", type=str,
+                                             required=True, help="Location of the output file for the test data.")
 
+    # Train Model Subparser
+    train_model_subparser.add_argument("--config_path", type=str,
+                                       default="./config/model_config/pipeline_config.yaml",
+                                       help="Location of the pipeline configuration yaml file.")
+    train_model_subparser.add_argument("--train_input_source", type=str,
+                                       required=True,
+                                       help="Location of the input training data file.")
+    train_model_subparser.add_argument("--model_output_source", type=str,
+                                       default="./models/trained_model_object.joblib",
+                                       required=True,
+                                       help="Location of the output file for the trained model object.")
 
-    # sp_predict = subparsers.add_parser("predict",
-    #                                   description="Fetch raw data and save to S3")
-    # sp_predict.add_argument("--model_object_path", type=str,
-    #                     required=True,
-    #                     help = "Path of the data on s3 to read from or write to.")
-    # sp_predict.add_argument("--ohe_object_path", type=str,
-    #                     required=True,
-    #                     help = "Path of the data on s3 to read from or write to.")
-    # sp_predict.add_argument("--output_path", type=str,
-    #                                   default = "None",
-    #                                   help="Local path or URL to read from or write to.")
-    # sp_predict.add_argument("--s3", action = "store_true",
-    #                                   help="Local path or URL to read from or write to.")
-    # sp_predict.add_argument("--temp", type=float,
-    #                                   help="Local path or URL to read from or write to.")
-    # sp_predict.add_argument("--cloud_percentage", type=float,
-    #                                   help="Local path or URL to read from or write to.")
-    # sp_predict.add_argument("--holiday", type=int,
-    #                                   help="Local path or URL to read from or write to.")
-    # sp_predict.add_argument("--rain_1h", type=float,
-    #                                   help="Local path or URL to read from or write to.")
-    # sp_predict.add_argument("--weather", type=str,
-    #                                   help="Local path or URL to read from or write to.")
-    # sp_predict.add_argument("--month", type=str,
-    #                                   help="Local path or URL to read from or write to.")
-    # sp_predict.add_argument("--day_of_week", type=str,
-    #                                   help="Local path or URL to read from or write to.")
-    # sp_predict.add_argument("--hour", type=str,
-    #                                   help="Local path or URL to read from or write to.")
+    # Score Model Subparser
+    score_model_subparser.add_argument("--config_path", type=str,
+                                       default="./config/model_config/pipeline_config.yaml",
+                                       help="Location of the pipeline configuration yaml file.")
+    score_model_subparser.add_argument("--model_input_source", type=str,
+                                       required=True,
+                                       help="Location of the input file for trained model object.")
+    score_model_subparser.add_argument("--one_hot_input_source", type=str,
+                                       required=True,
+                                       help="Location of the input file for one-hot-encoder object.")
+    score_model_subparser.add_argument("--test_input_source", type=str,
+                                       required=True,
+                                       help="Location of the input file for the test data.")
+    score_model_subparser.add_argument("--predictions_output_source", type=str,
+                                       required=True,
+                                       help="Location of the output file for the predicted classes.")
 
-    args = parser.parse_args()
-    command_choice = args.subparser_name
+    # Evaluate Model Subparser
+    evaluate_subparser.add_argument("--config_path", type=str,
+                                    default="./config/model_config/pipeline_config.yaml",
+                                    help="Location of the pipeline configuration yaml file.")
+    evaluate_subparser.add_argument("--test_input_source", type=str,
+                                    required=True,
+                                    help="Location of the input file for test data (true values).")
+    evaluate_subparser.add_argument("--predictions_input_source", type=str,
+                                    required=True,
+                                    help="Location of the input file for predicted values.")
+    evaluate_subparser.add_argument("--performance_metrics_output_source", type=str,
+                                    required=True,
+                                    help="Location of the input file for the predicted class probabilities.")
+
+    command_line_args = parser.parse_args()
+    command_choice = command_line_args.action
+
     if command_choice == 'create_db':
-        create_db_richard(args.engine_string)
-    elif command_choice == 'ingest':
-        #add_song(args)
+        create_db(command_line_args.engine_string)
+    elif command_choice == 'initialize_tables':
         pass
     elif command_choice == 'fetch':
-        s3_write(s3_destination=args.path_s3, data_source=args.data_url, delimiter=args.delimiter)
-    elif command_choice == 'clean':
-        src.data_preprocessing.clean_data(data_source=args.data_source, clean_data_path=args.output_path,
-                                          delimiter=args.delimiter)
-    elif command_choice == 'create_features':
-
-        try:
-            with open(config.config.MODEL_CONFIG_PATH, "r", encoding="utf-8") as preprocess_yaml:
-                preprocess_parameters = yaml.load(preprocess_yaml, Loader=yaml.FullLoader)
-        except FileNotFoundError:
-            logger.error("Could not locate the model configuration file specified in config.config.py: %s.",
-                         config.config.MODEL_CONFIG_PATH)
-        else:
-            src.data_preprocessing.generate_features(data_source=args.data_source,
-                                                     features_path=args.output_path,
-                                                     ohe_path=args.one_hot_path,
-                                                     ohe_path_s3=args.one_hot_path_s3,
-                                                     ohe_to_s3=args.s3,
-                                                     preprocess_params=preprocess_parameters["preprocess_data"],
-                                                     delimiter=args.delimiter)
-    elif command_choice == 'train_model':
-        try:
-            with open(config.config.MODEL_CONFIG_PATH, "r", encoding="utf-8") as preprocess_yaml:
-                preprocess_parameters = yaml.load(preprocess_yaml, Loader=yaml.FullLoader)
-        except FileNotFoundError:
-            logger.error("Could not locate the model configuration file specified in config.config.py: %s.",
-                         config.config.MODEL_CONFIG_PATH)
-        else:
-            src.train_model.train_model(model_data_source=args.data_source,
-                                        model_training_params=preprocess_parameters["model_training"],
-                                        model_output_local_path=args.output_path_local,
-                                        model_output_s3_path=args.output_path_s3,
-                                        delimiter=args.delimiter)
+        src.orchestrate.fetch_data(command_line_args)
+    else:
+        # Every other option needs the yaml config file, so read it in here first before continuing.
+        config_dict = src.read_write_functions.read_yaml(command_line_args.config_path)
+        if len(config_dict) > 0:
+            if command_choice == 'clean':
+                src.orchestrate.run_clean_data(command_line_args, config_dict=config_dict)
+            elif command_choice == 'generate_features':
+                src.orchestrate.run_generate_features(command_line_args, config_dict=config_dict)
+            else:
+                pass
+            # elif command_choice == 'train_model':
+            #     try:
+            #         with open(config.config.MODEL_CONFIG_PATH, "r", encoding="utf-8") as preprocess_yaml:
+            #             preprocess_parameters = yaml.load(preprocess_yaml, Loader=yaml.FullLoader)
+            #     except FileNotFoundError:
+            #         logger.error("Could not locate the model configuration file specified in config.config.py: %s.",
+            #                      config.config.MODEL_CONFIG_PATH)
+            #     else:
+            #         src.train_model.train_model(model_data_source=args.data_source,
+            #                                     model_training_params=preprocess_parameters["model_training"],
+            #                                     model_output_local_path=args.output_path_local,
+            #                                     model_output_s3_path=args.output_path_s3,
+            #                                     delimiter=args.delimiter)
     # elif command_choice == 'predict':
     #
     #     src.predict.predict(predictors=,
@@ -178,5 +160,5 @@ if __name__ == '__main__':
     #                         model_output_local_path=args.output_path_local,
     #                         model_output_s3_path=args.output_path_s3,
     #                         delimiter=args.delimiter)
-    else:
-        parser.print_help()
+        else:
+            parser.print_help()
