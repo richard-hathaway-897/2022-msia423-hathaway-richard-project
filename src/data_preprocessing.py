@@ -5,76 +5,59 @@ import dateutil
 import numpy as np
 import pandas as pd
 import sklearn.preprocessing
-import joblib
 
-import src.s3_actions
+import src.read_write_s3
+import src.remove_outliers
 
 logger = logging.getLogger(__name__)
 
+def generate_features(data: pd.DataFrame,
+                      create_datetime_features_params: dict,
+                      collapse_weather_categories_params: dict,
+                      log_transform_params: dict,
+                      binarize_column_params: dict,
+                      remove_outlier_params: dict,
+                      one_hot_encoding_params: dict,
+                      train_test_split_params: dict,
+                      drop_columns: typing.List
+                      ) -> typing.Tuple[pd.DataFrame, pd.DataFrame, sklearn.preprocessing.OneHotEncoder]:
 
-def clean_data(data_source: str, clean_data_path: str, delimiter: str = ","):
-    try:
-        traffic = src.s3_actions.s3_read(s3_source=data_source, delimiter=delimiter)
-    except ValueError as value_error:
-        logger.error("Failed to read data in raw data for cleaning.")
-        raise ValueError(value_error)
-
-    traffic_before_shape = traffic.shape
-    logger.info("%d records and %d columns in raw data.", traffic_before_shape[0], traffic_before_shape[1])
-    traffic = traffic.drop_duplicates(keep='first')
-    traffic_after_shape = traffic.shape
-
-    logger.info("%d duplicate records dropped from the data. Clean data has %d records and %d columns.",
-                traffic_before_shape[0]-traffic_after_shape[0], traffic_after_shape[0], traffic_after_shape[1])
-    traffic = traffic.reset_index(drop=True)
-    src.s3_actions.s3_write(data_source=traffic, s3_destination=clean_data_path, delimiter=delimiter)
-
-
-def generate_features(data_source: str,
-                      features_path: str,
-                      ohe_path: str,
-                      ohe_path_s3: str,
-                      ohe_to_s3: bool,
-                      preprocess_params: dict,
-                      delimiter=",") -> None:
-
-
+    data_original_shape = data.shape
+    logger.info("Data prior to generating features has %d records and %d columns.",
+                data_original_shape[0], data_original_shape[1])
+    data = create_datetime_features(data, **create_datetime_features_params)
+    data = binarize_column(data, **binarize_column_params)
+    data = collapse_weather_categories(data, collapse_weather_categories_params)
+    data = log_transform(data, **log_transform_params)
 
     try:
-        print(data_source)
-        traffic = src.s3_actions.s3_read(s3_source=data_source, delimiter=delimiter)
-    except ValueError as value_error:
-        logger.error("Failed to read data in preprocessing.")
-        raise ValueError(value_error)
+        data = data.drop(drop_columns +
+                         list(log_transform_params["log_transform_column_names"]) +
+                         list(binarize_column_params["binarize_column_names"]),
+                         axis=1)
+    except KeyError as key_error:
+        logger.error("At least one column that was attempted to drop does not exist. %s", key_error)
+    else:
+        logger.info("Dropped the following columns from the dataset: %s",
+                    str(drop_columns +
+                        list(log_transform_params["log_transform_column_names"]) +
+                        list(binarize_column_params["binarize_column_names"])))
 
-    print(traffic["weather_main"].value_counts())
+    data = src.remove_outliers.remove_outliers(data,
+                                               **remove_outlier_params["feature_columns"],
+                                               **remove_outlier_params["valid_values"])
 
-    traffic_original_shape = traffic.shape
-    logger.info("Data prior to generating features has %d records and %d columns.", traffic_original_shape[0], traffic_original_shape[1])
-    traffic = create_datetime_features(traffic)
-    traffic = remove_outliers(traffic, preprocess_params["valid_data"])
-    traffic = collapse_weather_categories(traffic, preprocess_params)
-    traffic = binarize_column(traffic, preprocess_params)
-    traffic = log_transform(traffic, preprocess_params)
+    data = data.reset_index(drop=True)
+    data, one_hot_encoder = one_hot_encoding(data, **one_hot_encoding_params)
+    train, test = create_train_test_split(data, **train_test_split_params)
+    logger.info("Finished generating features.")
+    logger.info("Train contains %d records and %d columns", train.shape[0], train.shape[1])
+    logger.info("Test contains %d records and %d columns", test.shape[0], test.shape[1])
 
-    traffic = traffic.drop(list(preprocess_params["drop_columns"]) +
-                           list(preprocess_params["log_transform_columns"]) +
-                           list(preprocess_params["binarize_columns"]), axis=1)
-    logger.info("Dropped the following columns from the dataset: %s", str(list(preprocess_params["drop_columns"]) +
-                                                                          list(preprocess_params["log_transform_columns"]) +
-                                                                          list(preprocess_params["binarize_columns"])))
-
-
-    traffic = traffic.reset_index(drop=True)
-    traffic = one_hot_encoding(traffic, preprocess_params["one_hot_encode_columns"], ohe_path, ohe_path_s3, ohe_to_s3)
-    traffic_final_shape = traffic.shape
-    logger.info("Finished generating features. Final dataset contains %d records and %d columns", traffic_final_shape[0], traffic_final_shape[1])
-
-    src.s3_actions.s3_write(data_source=traffic, s3_destination=features_path, delimiter=delimiter)
+    return train, test, one_hot_encoder
 
 
-def collapse_weather_categories(data: pd.DataFrame, preprocess_params: dict):
-    collapse_dict = preprocess_params["collapse_weather_categories"]
+def collapse_weather_categories(data: pd.DataFrame, collapse_dict: dict):
     for collapse_key in collapse_dict.keys():
         records_to_collapse = \
             data.loc[data["weather_main"] == collapse_dict[collapse_key]["original_category"]].shape[0]
@@ -86,65 +69,65 @@ def collapse_weather_categories(data: pd.DataFrame, preprocess_params: dict):
     return data
 
 
-def log_transform(data: pd.DataFrame, preprocess_params: dict):
-    for column_log in preprocess_params["log_transform_columns"]:
-        data["log_" + column_log] = np.log1p(data[column_log])
-        logger.info("Log transformed column %s. Added column 'log_%s' to the dataset.", column_log, column_log)
+def log_transform(data: pd.DataFrame, log_transform_column_names: typing.List, log_transform_new_column_prefix: str) -> pd.DataFrame:
+    for column_log in log_transform_column_names:
+        try:
+            data[log_transform_new_column_prefix + column_log] = np.log1p(data[column_log])
+        except TypeError:
+            logger.error("Could not log transform the column. Data type cannot be log transformed.")
+        except KeyError:
+            logger.error("Could not log transform the column. The specified column %s is not in the dataframe.", column_log)
+        else:
+            logger.info("Log transformed column %s. Added column '%s' to the dataset.",
+                        column_log, log_transform_new_column_prefix + column_log)
 
     return data
 
 
-def binarize_column(data: pd.DataFrame, preprocess_params: dict):
-    for column_binarize in preprocess_params["binarize_columns"]:
-        data[column_binarize + "_binary"] = data[column_binarize] \
-            .apply(func=binarize, args=[preprocess_params["binarize_zero_value"]])
-        logger.info("Binarized column %s. Added column '%s_binarize' to the dataset.", column_binarize, column_binarize)
+def binarize_column(data: pd.DataFrame, binarize_column_names, binarize_new_column_prefix, binarize_zero_value):
+    for column_binarize in binarize_column_names:
+        try:
+            data[binarize_new_column_prefix + column_binarize] = data[column_binarize] \
+                .apply(func=binarize, args=[binarize_zero_value])
+        except KeyError:
+            logger.error("Could not binarize the column. The specified column does not exist in the dataframe.")
+        else:
+            logger.info("Binarized column %s. Added column '%s' to the dataset.",
+                        column_binarize, binarize_new_column_prefix + column_binarize)
 
     return data
 
-def remove_outliers(data: pd.DataFrame, remove_outlier_params: dict) -> pd.DataFrame:
-    # TODO: Check to make sure these columns exist in the dataframe.
-    data_shape = data.shape
-    data = data[data["temp"] >= remove_outlier_params["temp_min"]]
-    data = data[data["temp"] <= remove_outlier_params["temp_max"]]
+def create_datetime_features(data: pd.DataFrame,
+                             original_datetime_column,
+                             month_column,
+                             hour_column,
+                             day_of_week_column) -> pd.DataFrame:
 
-    data = data[data["rain_1h"] >= remove_outlier_params["rain_mm_min"]]
-    data = data[data["rain_1h"] <= remove_outlier_params["rain_mm_max"]]
+    try:
+        data[original_datetime_column] = data[original_datetime_column] \
+                .apply(func=validate_date_time)
+    except KeyError:
+        logger.error("Could not generate datetime features. "
+                     "The specified date time column %s does not exist in the dataframe.",
+                     original_datetime_column)
+    else:
 
-    data = data[data["clouds_all"] >= remove_outlier_params["clouds_min"]]
-    data = data[data["clouds_all"] <= remove_outlier_params["clouds_max"]]
+        data.dropna(axis=0, subset=[original_datetime_column], inplace=True)
 
-    data = data[data["traffic_volume"] >= remove_outlier_params["traffic_min"]]
-    data = data[data["traffic_volume"] <= remove_outlier_params["traffic_max"]]
+        data[month_column] = data[original_datetime_column].dt.month
+        data[hour_column] = data[original_datetime_column].dt.hour
+        data[day_of_week_column] = data[original_datetime_column].dt.day_name()
 
-    data_outlier_shape = data.shape
-    logger.info("After removing outliers, the data has %d records and %d columns. %d records were removed.",
-                data_outlier_shape[0],
-                data_outlier_shape[1],
-                data_shape[0] - data_outlier_shape[0])
-
-    return data
-
-    # Check to make sure this is not infinity or - infinity
-
-
-def create_datetime_features(data: pd.DataFrame) -> pd.DataFrame:
-    data["date_time"] = data["date_time"] \
-            .apply(func=validate_date_time)
-    data.dropna(axis=0, subset=["date_time"], inplace=True)
-
-    data["year"] = data["date_time"].dt.year
-    data["month"] = data["date_time"].dt.month
-    data["hour"] = data["date_time"].dt.hour
-    data["day_of_week"] = data["date_time"].dt.day_name()
-
-    data_shape = data.shape
-    logger.info("After generating datetime features, the data has %d records and %d columns.", data_shape[0],
-                data_shape[1])
+        data_shape = data.shape
+        logger.info("After generating columns '%s', '%s', and '%s', the data has %d records and %d columns.",
+                    month_column,
+                    hour_column,
+                    day_of_week_column,
+                    data_shape[0],
+                    data_shape[1])
 
     return data
 
-    # TODO: Can these "year", "month", etc. stay hardcoded?
 
 def validate_date_time(date_time_string: str):
     try:
@@ -165,36 +148,78 @@ def binarize(value: str, zero_value: str) -> int:
         return 0
     else:
         return 1
-    # TODO: Is this hardcoding?
+
 
 def fahrenheit_to_kelvin(temp_deg_f: float) -> float:
     kelvin = (temp_deg_f - 32) * (5/9) + 273.15
     return kelvin
 
-def one_hot_encoding(data: pd.DataFrame, one_hot_encode_columns: typing.List, ohe_path: str, ohe_path_s3: str, ohe_to_s3: bool) -> pd.DataFrame:
+
+def one_hot_encoding(data: pd.DataFrame,
+                     one_hot_encode_columns: typing.List,
+                     sparse: bool = True,
+                     drop: str = 'first'
+                     ) -> typing.Tuple[pd.DataFrame, sklearn.preprocessing.OneHotEncoder]:
 
     logger.info("Prior to One Hot Encoding, data has %d columns.", data.shape[1])
-    logger.info("Number of NA values: %d", data.isna().sum().sum())
-    # TODO: Make these drop and sparse commands into params? I dont think they would ever change.
-    one_hot_encoder = sklearn.preprocessing.OneHotEncoder(drop='first', sparse=False)
-    one_hot_array = one_hot_encoder.fit_transform(data[one_hot_encode_columns])
-    one_hot_column_names = one_hot_encoder.get_feature_names_out()
-    one_hot_df = pd.DataFrame(one_hot_array, columns=one_hot_column_names)
+    data_one_hot_encoded = pd.DataFrame()
+    one_hot_encoder = sklearn.preprocessing.OneHotEncoder(drop=drop, sparse=sparse)
+    try:
+        one_hot_array = one_hot_encoder.fit_transform(data[one_hot_encode_columns])
+    except KeyError as key_error:
+        logger.error("At least one column did not exist in the dataframe. %s", key_error)
+    else:
+        one_hot_column_names = one_hot_encoder.get_feature_names_out()
+        one_hot_df = pd.DataFrame(one_hot_array, columns=one_hot_column_names)
 
-    data_one_hot_encoded = data.join(one_hot_df).drop(one_hot_encode_columns, axis=1)
-    logger.info("One Hot Encoded the following columns: %s", str(one_hot_encode_columns))
-    logger.info("After One Hot Encoding, data has %d columns.", data_one_hot_encoded.shape[1])
+        data_one_hot_encoded = data.join(one_hot_df).drop(one_hot_encode_columns, axis=1)
+        logger.info("One Hot Encoded the following columns: %s", str(one_hot_encode_columns))
+        logger.info("After One Hot Encoding, data has %d columns.", data_one_hot_encoded.shape[1])
 
-    # TODO: CHECK FOR NULL VALUES!!!
 
-    logger.info("Number of NA values: %d", data_one_hot_encoded.isna().sum().sum())
+        logger.info("Number of NA values: %d", data_one_hot_encoded.isna().sum().sum())
 
-    joblib.dump(one_hot_encoder, ohe_path)
+    if data_one_hot_encoded.empty:
+        logger.warning("One Hot Encoding Failed. Returning empty dataframe.")
+    return data_one_hot_encoded, one_hot_encoder
 
-    if ohe_to_s3:
-        src.s3_actions.s3_write_from_file(ohe_path, ohe_path_s3)
+def create_train_test_split(
+        data: pd.DataFrame,
+        test_size: float = 0.4,
+        random_state: int = 24,
+        shuffle: bool = True) -> typing.Tuple[pd.DataFrame, pd.DataFrame]:
+    """This function creates a train/test split from an input dataframe.
 
-    return data_one_hot_encoded
+    Args:
+        data (pd.DataFrame): the input dataframe.
+        test_size (float): A float greater than 0 and less than 1 specifying the
+            proportion of the data that should be held out in the test set.
+        random_state (int): An integer specifying the random state.
+        shuffle (bool): A boolean specifying whether the data should be shuffled before splitting into train and test
+            data.
 
-# Check for duplicates
-# Write out as an artifact what the performance metrics are
+    Returns:
+        train, test (Tuple[pd.DataFrame, pd.DataFrame]): A tuple of dataframes, the first of which is the train dataset
+            and the second of which is the test dataset. If the train test split fails,
+            two empty dataframes are returned.
+
+    """
+    try:
+        train, test = sklearn.model_selection.train_test_split(
+            data, test_size=test_size, random_state=random_state, shuffle=shuffle)
+    except TypeError as type_error:
+        # This error can occur if the input is not a dataframe
+        logger.error(
+            "Invalid input type. Check that the input is a dataframe. %s", type_error
+        )
+        logger.warning("Returning two empty dataframes.")
+        train, test = (pd.DataFrame(), pd.DataFrame())
+    except ValueError as val_error:
+        # This error can occur if invalid parameters are passed to train_test_split (for example, a test size of 1.2)
+        logger.error("Invalid parameters passed to the train_test_split function. %s", val_error)
+        train, test = (pd.DataFrame(), pd.DataFrame())
+    else:
+        logger.info(
+            "Created train/test split of the data using test size of %f, shuffle set to '%r', "
+            "and random state = %d.", test_size, shuffle, random_state)
+    return train, test
