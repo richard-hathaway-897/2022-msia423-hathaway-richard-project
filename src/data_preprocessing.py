@@ -5,6 +5,7 @@ import dateutil
 import numpy as np
 import pandas as pd
 import sklearn.preprocessing
+import sklearn.model_selection
 
 import src.read_write_s3
 import src.remove_outliers
@@ -30,23 +31,13 @@ def generate_features(data: pd.DataFrame,
     data = collapse_weather_categories(data, collapse_weather_categories_params)
     data = log_transform(data, **log_transform_params)
 
-    try:
-        data = data.drop(drop_columns +
-                         list(log_transform_params["log_transform_column_names"]) +
-                         list(binarize_column_params["binarize_column_names"]),
-                         axis=1)
-    except KeyError as key_error:
-        logger.error("At least one column that was attempted to drop does not exist. %s", key_error)
-    else:
-        logger.info("Dropped the following columns from the dataset: %s",
-                    str(drop_columns +
-                        list(log_transform_params["log_transform_column_names"]) +
-                        list(binarize_column_params["binarize_column_names"])))
-
+    cols_drop = drop_columns + \
+                list(log_transform_params["log_transform_column_names"]) + \
+                list(binarize_column_params["binarize_column_names"])
+    data = columns_drop(data, columns=cols_drop)
     data = src.remove_outliers.remove_outliers(data,
                                                **remove_outlier_params["feature_columns"],
                                                **remove_outlier_params["valid_values"])
-
     data = data.reset_index(drop=True)
     data, one_hot_encoder = one_hot_encoding(data, **one_hot_encoding_params)
     train, test = create_train_test_split(data, **train_test_split_params)
@@ -56,6 +47,15 @@ def generate_features(data: pd.DataFrame,
 
     return train, test, one_hot_encoder
 
+def columns_drop(data, columns):
+    try:
+        data = data.drop(columns, axis=1)
+    except KeyError as key_error:
+        logger.error("At least one column that was attempted to drop does not exist. %s", key_error)
+    else:
+        logger.info("Dropped the following columns from the dataset: %s",
+                    str(columns))
+    return data
 
 def collapse_weather_categories(data: pd.DataFrame, collapse_dict: dict):
     for collapse_key in collapse_dict.keys():
