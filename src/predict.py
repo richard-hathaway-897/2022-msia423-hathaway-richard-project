@@ -22,64 +22,26 @@ logger = logging.getLogger(__name__)
 #             }
 
 
-def predict_preprocess(predictors: dict, preprocess_params: dict) -> pd.DataFrame:
-    # Call to validate()
-    predictors_dict_for_df = {}
-    for column_name, value in predictors.items():
-        predictors_dict_for_df[column_name] = [value]
-    prediction_df = pd.DataFrame(predictors_dict_for_df)
 
-    prediction_df = src.data_preprocessing.collapse_weather_categories(prediction_df, preprocess_params)
-    prediction_df = src.data_preprocessing.binarize_column(prediction_df, preprocess_params)
-    prediction_df = src.data_preprocessing.log_transform(prediction_df, preprocess_params)
-    prediction_df["temp"] = src.data_preprocessing.fahrenheit_to_kelvin(prediction_df["temp"]) # TODO: Is temp hardcoded?
-
-    prediction_df = prediction_df.drop(list(preprocess_params["log_transform_columns"]) +
-                                        list(preprocess_params["binarize_columns"]), axis=1)
-    logger.info("Dropped the following columns from the dataset: %s", str(list(preprocess_params[
-                                                                                   "log_transform_columns"]) +
-                                                                          list(preprocess_params["binarize_columns"])))
-    return prediction_df
 
 
 def ohe_new_predict():
     pass
-    # one_hot_encode_columns = ["weather_main", "month", "hour", "day_of_week"] # TODO USE YAML
-    # # if s3_bool:
-    # #     src.s3_actions.s3_read_from_file(model_object_path, "./trained_model_object_s3.joblib") #TODO Fix hardcoding
-    # #     src.s3_actions.s3_read_from_file(ohe_object_path, "./ohe_object.joblib")
-    # logger.info("Attempt to load model objects")
-    # try:
-    #     model_object = joblib.load(model_object_path)
-    # except Exception as e:
-    #     logger.error(e)
-    # logger.info("Loaded Trained Model Object")
-    # try:
-    #     one_hot_encoder = joblib.load(ohe_object_path)
-    # except Exception as e:
-    #     logger.error(e)
-    # logger.info("Loaded One Hot Encoder")
-    #
-    # #new_data = pd.DataFrame(predictors)
-    # one_hot_array = one_hot_encoder.transform(new_data[["weather_main", "month", "hour", "day_of_week"]]) # TODO use yaml config herer
-    # #print(ohe_new_data)
-    #
-    # one_hot_column_names = one_hot_encoder.get_feature_names_out()
-    # one_hot_df = pd.DataFrame(one_hot_array, columns=one_hot_column_names)
-    # data_one_hot_encoded = new_data.join(one_hot_df).drop(one_hot_encode_columns, axis=1)
-    # print(data_one_hot_encoded.head())
-    # logger.info("One Hot Encoded the new data")
 
 
-def make_predictions(new_data: pd.DataFrame, model: sklearn.base.BaseEstimator, response_column: str) -> pd.Series:
+
+def make_predictions(new_data: pd.DataFrame, model: sklearn.base.BaseEstimator, response_column: str, is_test_data: bool) -> pd.Series:
 
     predictions_series = pd.Series(dtype='float64')
     predictions = None
-    try:
-        predictors = new_data.drop([response_column], axis=1)
-    except KeyError as key_error:
-        logger.error("The response column was not present in the dataframe. Returning an empty series.", key_error)
-        return predictions_series
+    if is_test_data:
+        try:
+            predictors = new_data.drop([response_column], axis=1)
+        except KeyError as key_error:
+            logger.error("The response column was not present in the dataframe. Returning an empty series. %s", key_error)
+            return predictions_series
+    else:
+        predictors = new_data
 
     successful_prediction = True
 
