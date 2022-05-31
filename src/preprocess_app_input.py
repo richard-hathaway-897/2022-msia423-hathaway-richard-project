@@ -17,11 +17,6 @@ def predict_preprocess(predictors: dict,
                        remove_outlier_params: dict,
                        one_hot_encoding_params: dict,
                        one_hot_encoder: sklearn.preprocessing.OneHotEncoder) -> pd.DataFrame:
-    try:
-        predictors = validate_app_input(predictors)
-    except ValueError:
-        logger.error("An input data type was not valid")
-        raise ValueError
 
     predictors_dict_as_single_item_lists = {}
     for column_name, value in predictors.items():
@@ -77,7 +72,7 @@ def app_input_one_hot_encode(prediction_df, one_hot_encoder, one_hot_encode_colu
     return data_one_hot_encoded
 
 
-def validate_app_input(input_dict: dict):
+def validate_app_input(input_dict: dict, validate_user_input_params):
     valid_input = True
     if not isinstance(input_dict, dict):
         valid_input = False
@@ -85,7 +80,7 @@ def validate_app_input(input_dict: dict):
         valid_input = False
     else:
         try:
-            input_dict = validate_app_input_dtype(input_dict)
+            input_dict = validate_app_input_dtype(input_dict, **validate_user_input_params)
         except ValueError:
             valid_input = False
     if not valid_input:
@@ -93,56 +88,31 @@ def validate_app_input(input_dict: dict):
     return input_dict
 
 
-def validate_app_input_dtype(input_dict: dict):
+def validate_app_input_dtype(input_dict: dict,
+                            column_names,
+                            float_columns):
+
     new_query_params = {}
     valid_input = True
-    try:
-        new_query_params["temp"] = float(input_dict["temp"])
-    except ValueError:
-        logger.error("A float was not entered for temperature.")
-        valid_input = False
-
-    try:
-        new_query_params["clouds_all"] = float(input_dict["clouds_all"])
-    except ValueError:
-        logger.error("A float was not entered for percentage of clouds.")
-        valid_input = False
-
-    try:
-        new_query_params["weather_main"] = str(input_dict["weather_main"])
-    except ValueError:
-        logger.error("A valid string was not entered for weather description.")
-        valid_input = False
-
-    try:
-        new_query_params["month"] = int(input_dict["month"])
-    except ValueError:
-        logger.error("An integer was not entered for month.")
-        valid_input = False
-
-    try:
-        new_query_params["hour"] = int(input_dict["hour"])
-    except ValueError:
-        logger.error("An integer was not entered for hour.")
-        valid_input = False
-
-    try:
-        new_query_params["day_of_week"] = str(input_dict["day_of_week"])
-    except ValueError:
-        logger.error("A valid string was not entered for day of the week.")
-        valid_input = False
-
-    try:
-        new_query_params["holiday"] = str(input_dict["holiday"])
-    except ValueError:
-        logger.error("A string was not entered for holiday.")
-        valid_input = False
-
-    try:
-        new_query_params["rain_1h"] = float(input_dict["rain_1h"])
-    except ValueError:
-        logger.error("A float was not entered for hourly rainfall.")
-        valid_input = False
+    for col in column_names:
+        if col in float_columns:
+            try:
+                new_query_params[col] = float(input_dict[col])
+            except ValueError:
+                logger.error("A float was not entered for %s.", col)
+                valid_input = False
+            except KeyError:
+                logger.error("%s was not a field found in the input data.", col)
+                valid_input = False
+        else:
+            try:
+                new_query_params[col] = str(input_dict[col])
+            except ValueError:
+                logger.error("A string was not entered for %s.", col)
+                valid_input = False
+            except KeyError:
+                logger.error("%s was not a field found in the input data.", col)
+                valid_input = False
 
     if not valid_input:
         raise ValueError

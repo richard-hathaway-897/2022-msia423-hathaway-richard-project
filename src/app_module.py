@@ -26,8 +26,15 @@ def run_app_prediction(new_query_params: dict, model_object_path: str, one_hot_e
     if model is None:
         logger.error("Could not load the trained model object.")
         raise FileNotFoundError
+
     try:
-        prediction_df = src.preprocess_app_input.predict_preprocess(predictors=new_query_params,
+        predictors = src.preprocess_app_input.validate_app_input(new_query_params, config_dict["process_user_input"]["validate_user_input"])
+    except ValueError:
+        logger.error("An input data type was not valid")
+        raise ValueError
+
+    try:
+        prediction_df = src.preprocess_app_input.predict_preprocess(predictors=predictors,
                                                                     one_hot_encoder=one_hot_encoder,
                                                                     remove_outlier_params=config_dict["remove_outliers"],
                                                                     **config_dict["generate_features"]["pipeline_and_app"],
@@ -35,19 +42,18 @@ def run_app_prediction(new_query_params: dict, model_object_path: str, one_hot_e
     except ValueError:
         logger.error("Invalid user input.")
         raise ValueError
+
+    prediction = src.predict.make_predictions(prediction_df,
+                                              model=model,
+                                              is_test_data = False,
+                                              **config_dict["predict"])
+    if prediction.empty:
+        logger.error("No prediction was made.")
+        raise ValueError
     else:
+        traffic_volume = src.predict.classify_traffic(prediction[0])
 
-        prediction = src.predict.make_predictions(prediction_df,
-                                                  model=model,
-                                                  is_test_data = False,
-                                                  **config_dict["predict"])
-        if prediction.empty:
-            logger.error("No prediction was made.")
-            raise ValueError
-        else:
-            traffic_volume = src.predict.classify_traffic(prediction[0])
-
-        logger.info("Prediction: %f", prediction[0])
+    logger.info("Prediction: %f", prediction[0])
 
     return prediction, traffic_volume
 
