@@ -56,15 +56,6 @@ generate_features:
         - "holiday"
       binarize_new_column_prefix: "binarize_"
       binarize_zero_value: "None"
-    collapse_weather_categories_params:
-      collapse_dict:
-        collapse_1:
-          original_category: "Squall"
-          to_category: "Thunderstorm"
-        collapse_2:
-          original_category: "Smoke"
-          to_category: "Haze"
-      weather_column: "weather_main"
     one_hot_encoding_params:
       one_hot_encode_columns:
         - "weather_main"
