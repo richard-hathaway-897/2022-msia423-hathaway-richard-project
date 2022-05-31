@@ -39,12 +39,10 @@ def predict_preprocess(predictors: dict,
 
 
 def app_input_transformations(prediction_df,
-                              collapse_weather_categories_params,
                               binarize_column_params,
                               log_transform_params,
                               remove_outlier_params):
-    prediction_df = src.data_preprocessing.collapse_weather_categories(prediction_df,
-                                                                       **collapse_weather_categories_params)
+
     prediction_df = src.data_preprocessing.binarize_column(prediction_df, **binarize_column_params)
     prediction_df = src.data_preprocessing.log_transform(prediction_df, **log_transform_params)
     prediction_df["temp"] = src.data_preprocessing.fahrenheit_to_kelvin(
