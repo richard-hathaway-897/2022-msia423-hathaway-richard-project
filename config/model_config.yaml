@@ -1,6 +1,6 @@
 clean_data:
   duplicated_method: "first"
-validate:
+validate_dataframe:
   duplicated_method: "first"
 remove_outliers:
   feature_columns:
@@ -15,8 +15,8 @@ remove_outliers:
   valid_values:
     temp_min: 210
     temp_max: 330
-    rain_mm_min: 0
-    rain_mm_max: 300
+    log_rain_mm_min: 0
+    log_rain_mm_max: 5.7
     clouds_min: 0
     clouds_max: 100
     hours_min: 0
@@ -86,15 +86,15 @@ generate_features:
 
 
 model_training:
-  response_column: "traffic_volume"
-  train_test_split:
-    test_size: 0.2
-    random_state: 24
-    shuffle: True
   random_forest:
+    response_column: "traffic_volume"
     n_estimators: 200
     criterion: "squared_error"
     min_samples_split: 5
     max_features: "sqrt"
     oob_score: True
     n_jobs: -1
+    random_state: 24
+
+predict:
+  response_column: "traffic_volume"
