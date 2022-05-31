@@ -57,12 +57,14 @@ generate_features:
       binarize_new_column_prefix: "binarize_"
       binarize_zero_value: "None"
     collapse_weather_categories_params:
-      collapse_1:
-        original_category: "Squall"
-        to_category: "Thunderstorm"
-      collapse_2:
-        original_category: "Smoke"
-        to_category: "Haze"
+      collapse_dict:
+        collapse_1:
+          original_category: "Squall"
+          to_category: "Thunderstorm"
+        collapse_2:
+          original_category: "Smoke"
+          to_category: "Haze"
+      weather_column: "weather_main"
     one_hot_encoding_params:
       one_hot_encode_columns:
         - "weather_main"
@@ -90,9 +92,9 @@ generate_features:
 model_training:
   random_forest:
     response_column: "traffic_volume"
-    n_estimators: 50
+    n_estimators: 30
     criterion: "squared_error"
-    min_samples_split: 5
+    min_samples_split: 10
     max_features: "sqrt"
     oob_score: True
     n_jobs: -1
