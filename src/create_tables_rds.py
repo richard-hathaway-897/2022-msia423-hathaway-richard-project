@@ -56,12 +56,26 @@ class AppMetrics(Base):
     __tablename__ = "app_metrics"
 
     row_id = Column(Integer, primary_key=True)
-    likes = Column(Integer, unique=False, nullable=False)   # primary key
-    dislikes = Column(Integer, unique=False, nullable=False) # Number of times the particular query has been called.
+    likes = Column(Integer, unique=False, nullable=False)
+    dislikes = Column(Integer, unique=False, nullable=False)
 
     def __repr__(self):
         print(f"Likes: {self.likes} \n"
               f"Dislikes: {self.dislikes}")
+
+class ActivePrediction(Base):
+    """
+    This table will store the number of likes and dislikes received on the web application.
+    """
+    __tablename__ = "active_prediction"
+
+    row_id = Column(Integer, primary_key=True)
+    prediction = Column(Float, unique=False, nullable=False)
+    volume = Column(String(10), unique=False, nullable=False)
+
+    def __repr__(self):
+        print(f"Prediction: {self.prediction} \n"
+              f"Volume: {self.volume}")
 
 
 class QueryManager:
@@ -172,7 +186,23 @@ class QueryManager:
         session.commit()
         logger.info("Added like_dislike_row to the database.")
 
-def create_db_richard(engine_string: str) -> None:
+    def create_most_recent_query(self) -> None:
+        session = self.session
+        default_prediction = ActivePrediction(prediction=0, volume='Light')
+        # TODO: exception handling
+        session.add(default_prediction)
+        session.commit()
+        logger.info("Added empty active prediction row to the database.")
+
+    def update_active_prediction(self, new_prediction_value, new_volume) -> None:
+        session = self.session
+        session.query(ActivePrediction).update({"prediction": new_prediction_value, "volume": new_volume})
+        logger.info(new_prediction_value)
+        logger.info(new_volume)
+        session.commit()
+        logger.info("Updated most recent prediction.")
+
+def create_db(engine_string: str) -> None:
 
     # Make sure the environment variable exists
     if engine_string is None:
