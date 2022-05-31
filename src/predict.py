@@ -77,7 +77,11 @@ def make_predictions(new_data: pd.DataFrame, model: sklearn.base.BaseEstimator, 
 
     return predictions_series
 
-# with open("/Users/richard/Documents/school_work/SpringQuarter/AVC/2022-msia423-hathaway-richard-project/config/model_config.yaml", "r", encoding="utf-8") as preprocess_yaml:
-#     preprocess_parameters = yaml.load(preprocess_yaml, Loader=yaml.FullLoader)
-# df = predict_preprocess(predictors, preprocess_parameters["preprocess_data"])
-# predict(df)
+
+def classify_traffic(traffic_prediction: float) -> str:
+    if traffic_prediction < 2000:
+        return "light"
+    elif traffic_prediction < 3000:
+        return "moderate"
+    else:
+        return "heavy"
