@@ -15,8 +15,8 @@ def remove_outliers(data: pd.DataFrame,
                     month_column,
                     temp_min,
                     temp_max,
-                    rain_mm_min,
-                    rain_mm_max,
+                    log_rain_mm_min,
+                    log_rain_mm_max,
                     clouds_min,
                     clouds_max,
                     hours_min,
@@ -32,7 +32,7 @@ def remove_outliers(data: pd.DataFrame,
     # Note, filter data checks whether or not the column exists and if the data types match.
     data_shape = data.shape
     data = filter_data(data, column_name=temperature_column, min_value=temp_min, max_value=temp_max)
-    data = filter_data(data, column_name=rain_column, min_value=rain_mm_min, max_value=rain_mm_max)
+    data = filter_data(data, column_name=rain_column, min_value=log_rain_mm_min, max_value=log_rain_mm_max)
     data = filter_data(data, column_name=clouds_column, min_value=clouds_min, max_value=clouds_max)
     data = filter_data(data, column_name=hour_column, min_value=hours_min, max_value=hours_max)
     data = filter_data(data, column_name=month_column, min_value=month_min, max_value=month_max)
