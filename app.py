@@ -12,6 +12,8 @@ from src.create_tables_rds import QueryManager, HistoricalQueries, AppMetrics
 import src.predict
 import config.config
 import src.validate
+import src.read_write_functions
+import src.preprocess_app_input
 
 # Initialize the Flask application
 app = Flask(__name__, template_folder="app/templates",
@@ -94,7 +96,11 @@ def index(prediction: float = 0):
             return render_template('error.html')
         else:
             logger.debug("Index page accessed")
-            return render_template('index.html', user_query=user_query, like_dislike_count=like_dislike_count, prediction=prediction, traffic_level="Light")
+            return render_template('index.html',
+                                   user_query=user_query,
+                                   like_dislike_count=like_dislike_count,
+                                   prediction=prediction,
+                                   traffic_level="Light")
 
 
 
@@ -102,6 +108,10 @@ def index(prediction: float = 0):
 def enter_query_parameters():
     """
     """
+    config_dict = src.read_write_functions.read_yaml(app.config["MODEL_CONFIG_PATH"])
+    if len(config_dict) == 0:
+        logger.error("Could not load app configuration file.")
+        return render_template('error.html')
 
     # TODO: Is hardcoding these column names bad?
     new_query_params = {}
@@ -114,25 +124,32 @@ def enter_query_parameters():
     new_query_params["holiday"] = request.form["holiday"]
     new_query_params["rain_1h"] = request.form["rainfall_hour"]
 
-    validation_result = src.validate.validate_user_input_dtype(new_query_params)
-
-    if not validation_result["data_status"]:
-        logger.error("One or more data entries had an invalid data type.")
+    logger.info("Making predictions")
+    one_hot_encoder = src.read_write_functions.load_model_object(app.config["PATH_TRAINED_ONE_HOT_ENCODER"])
+    if one_hot_encoder is None:
+        logger.error("Could not load the one hot encoder.")
         return render_template('error.html')
-
+    model = src.read_write_functions.load_model_object(app.config["PATH_TRAINED_MODEL_OBJECT"])
+    if model is None:
+        logger.error("Could not load the trained model object.")
+        return render_template('error.html')
     try:
-        with open(config.config.MODEL_CONFIG_PATH, "r", encoding="utf-8") as preprocess_yaml:
-            preprocess_parameters = yaml.load(preprocess_yaml, Loader=yaml.FullLoader)
-    except FileNotFoundError:
-        logger.error("Could not locate the model configuration file specified in config.config.py: %s.",
-                     config.config.MODEL_CONFIG_PATH)
+        prediction_df = src.preprocess_app_input.predict_preprocess(predictors=new_query_params,
+                                                                    one_hot_encoder=one_hot_encoder,
+                                                                    remove_outlier_params=config_dict["remove_outliers"],
+                                                                    **config_dict["generate_features"]["pipeline_and_app"],
+                                                                    )
+    except ValueError:
+        logger.error("Invalid user input.")
+        return render_template('invalid_input.html')
+
+    prediction = src.predict.make_predictions(prediction_df,
+                                             model=model,
+                                             is_test_data = False,
+                                             **config_dict["predict"])
+    if prediction.empty:
         return render_template('error.html')
 
-    prediction_df = src.predict.predict_preprocess(validation_result["data"], preprocess_parameters["preprocess_data"])
-    prediction = src.predict.predict(prediction_df,
-                                     model_object_path=app.config["PATH_TRAINED_MODEL_OBJECT"],
-                                     ohe_object_path=app.config["PATH_TRAINED_ONE_HOT_ENCODER"],
-                                     s3_bool=False)
     logger.info("Prediction: %f", prediction[0])
 
     query_count = query_manager.search_for_query_count(query_params=new_query_params)
@@ -158,7 +175,7 @@ def enter_query_parameters():
             return render_template('error.html')
     else:
         query_manager.increment_query_count(query_params=new_query_params)
-        return redirect(url_for('index', prediction=prediction[0]))
+        return redirect(url_for('index'))
 
 
 @app.route('/like', methods=['POST'])
