@@ -102,12 +102,19 @@ predict:
   response_column: "traffic_volume"
 
 process_user_input:
-  feature_columns:
-    holiday_column: "holiday"
-    month_column: "month"
-    hour_column: "hour"
-    day_of_week_column: "day_of_week"
-    temperature_column: "temp"
-    clouds_column: "clouds_all"
-    weather_column: "weather_main"
-    rain_column: "log_rain_1h"
+  validate_user_input:
+    column_names:
+      - "holiday"
+      - "month"
+      - "hour"
+      - "day_of_week"
+      - "temp"
+      - "clouds_all"
+      - "weather_main"
+      - "rain_1h"
+    float_columns:
+      - "temp"
+      - "rain_1h"
+      - "clouds_all"
+      - "month"
+      - "hour"
