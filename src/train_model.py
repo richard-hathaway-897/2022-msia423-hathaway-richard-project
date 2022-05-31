@@ -13,7 +13,8 @@ def train_model(train_data: pd.DataFrame,
                 min_samples_split,
                 max_features,
                 oob_score,
-                n_jobs):
+                n_jobs,
+                random_state):
 
     # TODO: Data Validation when reading in. CHECK FOR NULLS!
     try:
@@ -23,16 +24,13 @@ def train_model(train_data: pd.DataFrame,
         raise key_error
 
     response = train_data[response_column]
-
-    print(predictors)
-
     rf_model = RandomForestRegressor(n_estimators=n_estimators,
                                      criterion=criterion,
                                      min_samples_split=min_samples_split,
                                      max_features=max_features,
                                      oob_score=oob_score,
-                                     n_jobs=n_jobs)
-
+                                     n_jobs=n_jobs,
+                                     random_state=random_state)
     try:
         rf_model.fit(X=predictors, y=response)
     except ValueError as val_error:
