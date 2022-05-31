@@ -11,24 +11,6 @@ import src.data_preprocessing
 
 logger = logging.getLogger(__name__)
 
-# predictors = {'temp': 288.3,
-#               'clouds_all': 75,
-#               'holiday': "None",
-#               'rain_1h': 0.01,
-#               'weather_main': 'Drizzle',
-#               'month': 9,
-#               'day_of_week': "Tuesday",
-#               'hour': 13
-#             }
-
-
-
-
-
-def ohe_new_predict():
-    pass
-
-
 
 def make_predictions(new_data: pd.DataFrame, model: sklearn.base.BaseEstimator, response_column: str, is_test_data: bool) -> pd.Series:
 
