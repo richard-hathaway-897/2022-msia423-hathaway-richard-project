@@ -3,19 +3,13 @@
 import argparse
 import logging.config
 
-import yaml
-
 from config.flaskconfig import SQLALCHEMY_DATABASE_URI
-import config.config
 from src.create_tables_rds import create_db
-import src.data_preprocessing
-import src.train_model
-#import src.predict
 import src.orchestrate
 import src.read_write_functions
 
 logging.config.fileConfig('config/logging/local.conf')
-logger = logging.getLogger('penny-lane-pipeline')
+logger = logging.getLogger('traffic-prediction-pipeline')
 
 if __name__ == '__main__':
 
@@ -31,9 +25,9 @@ if __name__ == '__main__':
     clean_data_subparser = subparsers.add_parser("clean", description="Clean the raw data.")
     generate_features_subparser = subparsers.add_parser("generate_features", description="Generate model features.")
     train_model_subparser = subparsers.add_parser("train_model", description="Train model.")
-    score_model_subparser = subparsers.add_parser("score_model",
+    predict_subparser = subparsers.add_parser("predict",
                                                   description="Score the model (make predictions using the model).")
-    evaluate_subparser = subparsers.add_parser("evaluate_performance",
+    evaluate_subparser = subparsers.add_parser("evaluate",
                                                description="Calculate model performance metrics.")
 
     # Create DB subparser
@@ -91,19 +85,16 @@ if __name__ == '__main__':
                                        help="Location of the output file for the trained model object.")
 
     # Score Model Subparser
-    score_model_subparser.add_argument("--config_path", type=str,
+    predict_subparser.add_argument("--config_path", type=str,
                                        default="./config/model_config/pipeline_config.yaml",
                                        help="Location of the pipeline configuration yaml file.")
-    score_model_subparser.add_argument("--model_input_source", type=str,
+    predict_subparser.add_argument("--model_input_source", type=str,
                                        required=True,
                                        help="Location of the input file for trained model object.")
-    score_model_subparser.add_argument("--one_hot_input_source", type=str,
-                                       required=True,
-                                       help="Location of the input file for one-hot-encoder object.")
-    score_model_subparser.add_argument("--test_input_source", type=str,
+    predict_subparser.add_argument("--test_input_source", type=str,
                                        required=True,
                                        help="Location of the input file for the test data.")
-    score_model_subparser.add_argument("--predictions_output_source", type=str,
+    predict_subparser.add_argument("--predictions_output_source", type=str,
                                        required=True,
                                        help="Location of the output file for the predicted classes.")
 
@@ -138,27 +129,14 @@ if __name__ == '__main__':
                 src.orchestrate.run_clean_data(command_line_args, config_dict=config_dict)
             elif command_choice == 'generate_features':
                 src.orchestrate.run_generate_features(command_line_args, config_dict=config_dict)
+            elif command_choice == 'train_model':
+                src.orchestrate.run_train_model(command_line_args, config_dict=config_dict)
+            elif command_choice == 'predict':
+                src.orchestrate.run_predict(command_line_args, config_dict=config_dict)
+            elif command_choice == 'evaluate':
+                src.orchestrate.run_evaluate(command_line_args, config_dict=config_dict)
             else:
-                pass
-            # elif command_choice == 'train_model':
-            #     try:
-            #         with open(config.config.MODEL_CONFIG_PATH, "r", encoding="utf-8") as preprocess_yaml:
-            #             preprocess_parameters = yaml.load(preprocess_yaml, Loader=yaml.FullLoader)
-            #     except FileNotFoundError:
-            #         logger.error("Could not locate the model configuration file specified in config.config.py: %s.",
-            #                      config.config.MODEL_CONFIG_PATH)
-            #     else:
-            #         src.train_model.train_model(model_data_source=args.data_source,
-            #                                     model_training_params=preprocess_parameters["model_training"],
-            #                                     model_output_local_path=args.output_path_local,
-            #                                     model_output_s3_path=args.output_path_s3,
-            #                                     delimiter=args.delimiter)
-    # elif command_choice == 'predict':
-    #
-    #     src.predict.predict(predictors=,
-    #                         model_training_params=preprocess_parameters["model_training"],
-    #                         model_output_local_path=args.output_path_local,
-    #                         model_output_s3_path=args.output_path_s3,
-    #                         delimiter=args.delimiter)
+                parser.print_help()
+
         else:
-            parser.print_help()
+            logger.error("YAML configuration file was empty. Could not execute the script.")
