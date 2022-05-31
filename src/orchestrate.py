@@ -79,7 +79,8 @@ def run_generate_features(command_line_args: argparse.Namespace, config_dict: di
         train_data, test_data, one_hot_encoder = \
             src.data_preprocessing.generate_features(data=input_data,
                                                      remove_outlier_params=config_dict["remove_outliers"],
-                                                     **config_dict["generate_features"])
+                                                     **config_dict["generate_features"]["pipeline_and_app"],
+                                                     **config_dict["generate_features"]["pipeline_only"])
         train_data = src.clean_data.clean_data(data=train_data, **config_dict["clean_data"])
         test_data = src.clean_data.clean_data(data=test_data, **config_dict["clean_data"])
 
@@ -130,7 +131,7 @@ def run_predict(command_line_args: argparse.Namespace, config_dict: dict) -> Non
         test_data,
         **config_dict["validate_dataframe"])
     if valid_data and model is not None:
-        predictions = src.predict.make_predictions(new_data=test_data, model=model, **config_dict["predict"])
+        predictions = src.predict.make_predictions(new_data=test_data, model=model, is_test_data=True, **config_dict["predict"])
         if not predictions.empty:
             src.read_write_functions.save_csv(predictions,
                                               command_line_args.predictions_output_source)
