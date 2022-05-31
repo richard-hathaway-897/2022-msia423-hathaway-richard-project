@@ -8,7 +8,6 @@ import joblib
 import sklearn
 import urllib.error
 
-logging.config.fileConfig("config/logging/local.conf")
 logger = logging.getLogger(__name__)
 
 
@@ -124,7 +123,7 @@ def load_model_object(model_input_source: str) -> sklearn.base.BaseEstimator:
     return model
 
 
-def save_csv(data: pd.DataFrame, output_path: str):
+def save_csv(data: typing.Union[pd.DataFrame, pd.Series], output_path: str):
     """This function saves a pandas dataframe as a csv file to a specified local output path.
 
     Args:
@@ -139,8 +138,14 @@ def save_csv(data: pd.DataFrame, output_path: str):
     except OSError as os_error:
         logger.error("Failed to save data because the folder does not exist. %s", os_error)
     else:
-        logger.info("Successfully saved csv file with %d columns and %d rows to %s.",
-                    data.shape[0], data.shape[1], output_path)
+        try:
+            logger.info("Successfully saved csv file with %d columns and %d rows to %s.",
+                        data.shape[0], data.shape[1], output_path)
+        except IndexError:
+            # If the data is a pandas series, trying to log data.shape will throw an index error, so log an alternative
+            # message if the IndexError arises.
+            logger.info("Successfully saved csv file with 1 column and %d rows to %s.",
+                        data.size, output_path)
 
     # Warn the user if a non-csv file format is specified. It could cause problems further along in the pipeline.
     if os.path.splitext(output_path)[1] != ".csv":
@@ -163,4 +168,14 @@ def save_model_object(model: sklearn.base.BaseEstimator, output_path: str) -> No
         logger.error("Saving model object failed because the output folder does not exist. %s", os_error)
     else:
         logger.info("Saved the model object to %s", output_path)
+
+def save_dict_as_text(data: dict, output_path: str) -> None:
+    try:
+        with open(output_path, "w") as data_file:
+            for metric, value in data.items():
+                data_file.write(metric + ": " + str(value) + "\n")
+    except OSError as os_error:
+        logger.error("Failed to save text file because the folder does not exist. %s", os_error)
+    else:
+        logger.info("Successfully saved text file to %s", output_path)
 
