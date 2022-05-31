@@ -1,6 +1,7 @@
 import logging
 import typing
 import dateutil
+import datetime
 
 import numpy as np
 import pandas as pd
@@ -22,6 +23,22 @@ def generate_features(data: pd.DataFrame,
                       train_test_split_params: dict,
                       drop_columns: typing.List
                       ) -> typing.Tuple[pd.DataFrame, pd.DataFrame, sklearn.preprocessing.OneHotEncoder]:
+    """
+
+    Args:
+        data:
+        create_datetime_features_params:
+        collapse_weather_categories_params:
+        log_transform_params:
+        binarize_column_params:
+        remove_outlier_params:
+        one_hot_encoding_params:
+        train_test_split_params:
+        drop_columns:
+
+    Returns:
+
+    """
 
     data_original_shape = data.shape
     logger.info("Data prior to generating features has %d records and %d columns.",
@@ -69,7 +86,23 @@ def collapse_weather_categories(data: pd.DataFrame, collapse_dict: dict):
     return data
 
 
-def log_transform(data: pd.DataFrame, log_transform_column_names: typing.List, log_transform_new_column_prefix: str) -> pd.DataFrame:
+def log_transform(data: pd.DataFrame,
+                  log_transform_column_names: typing.List,
+                  log_transform_new_column_prefix: str) -> pd.DataFrame:
+    """This function log transforms a list of input columns on a dataframe. This function uses np.log1p in order to
+        avoid taking the log of zero.
+
+    Args:
+        data (pd.DataFrame): The input dataframe
+        log_transform_column_names (typing.List): The list of column names for which each column in the list
+            should be log transformed.
+        log_transform_new_column_prefix (str): The prefix to append to create the new column name. For example,
+            if log_transform_new_column_prefix = "log_", then the new column name will be "log_" + column_name.
+
+    Returns:
+        data (pd.DataFrame): The dataframe containing the new log-transformed column.
+
+    """
     for column_log in log_transform_column_names:
         try:
             data[log_transform_new_column_prefix + column_log] = np.log1p(data[column_log])
@@ -84,7 +117,10 @@ def log_transform(data: pd.DataFrame, log_transform_column_names: typing.List, l
     return data
 
 
-def binarize_column(data: pd.DataFrame, binarize_column_names, binarize_new_column_prefix, binarize_zero_value):
+def binarize_column(data: pd.DataFrame,
+                    binarize_column_names: typing.List,
+                    binarize_new_column_prefix: str,
+                    binarize_zero_value: str) -> pd.DataFrame:
     for column_binarize in binarize_column_names:
         try:
             data[binarize_new_column_prefix + column_binarize] = data[column_binarize] \
@@ -97,12 +133,42 @@ def binarize_column(data: pd.DataFrame, binarize_column_names, binarize_new_colu
 
     return data
 
-def create_datetime_features(data: pd.DataFrame,
-                             original_datetime_column,
-                             month_column,
-                             hour_column,
-                             day_of_week_column) -> pd.DataFrame:
+def binarize(value: str, zero_value: str) -> int:
+    """This function converts an input string value to a zero-one binary variable depending on the "zero_value"
 
+    Args:
+        value (str): Value to convert to 0-1 variable
+        zero_value (str): Value to convert to zero. All values not matching the zero will be converted to one.
+
+    Returns:
+        return_value (int): Returns either a 0 or 1 depending on the input data.
+
+    """
+    return_value = 1
+    if value == zero_value:
+        return_value = 0
+
+    return return_value
+
+def create_datetime_features(data: pd.DataFrame,
+                             original_datetime_column: str,
+                             month_column: str,
+                             hour_column: str,
+                             day_of_week_column) -> pd.DataFrame:
+    """This function extracts the month, hour, and day of the week from a string date_time value and adds each
+        of them as new columns in the input pandas dataframe.
+
+    Args:
+        data (pd.DataFrame): The input dataframe with which to generate the datetime features
+        original_datetime_column (str): The name of the column holding the date_time as a string.
+        month_column (str): The name of the output column for the month variable.
+        hour_column (str): The name of the output column for the hour variable.
+        day_of_week_column (str): The name of the output column for the day of the week variable.
+
+    Returns:
+        data (pd.DataFrame): Returns the pandas dataframe that includes the newly generated columns.
+
+    """
     try:
         data[original_datetime_column] = data[original_datetime_column] \
                 .apply(func=validate_date_time)
@@ -129,28 +195,38 @@ def create_datetime_features(data: pd.DataFrame,
     return data
 
 
-def validate_date_time(date_time_string: str):
+def validate_date_time(date_time_string: str) -> typing.Union[datetime.datetime, None]:
+    """This function converts a date_time string in a pandas dataframe to a datetime.datetime object
+
+    Args:
+        date_time_string (str): The input datetime string
+
+    Returns:
+        date_time(typing.Union[datetime.datetime, None]): If the string is successfully converted, a datetime.datetime
+        object is returned. If the string is not able to be converted to a datetime object, then None is returned.
+    """
+    date_time = None
     try:
         date_time = pd.to_datetime(date_time_string)
     except dateutil.parser._parser.ParseError as invalid_date:
         logger.error("Invalid date found, removing record. ", invalid_date)
-        return None
+        return date_time
     else:
         return date_time
 
 
 
-def binarize(value: str, zero_value: str) -> int:
-    """
-    Makes a column into a binary 0-1 variable
-    """
-    if value == zero_value:
-        return 0
-    else:
-        return 1
-
-
 def fahrenheit_to_kelvin(temp_deg_f: float) -> float:
+    """This function converts from degrees fahrenheit to degrees kelvin using the standard formula for conversion
+    between these two temperature units.
+
+    Args:
+        temp_deg_f (float): The input temperature in degrees fahrenheit.
+
+    Returns:
+        kelvin (float): The temperature converted to kelvin.
+
+    """
     kelvin = (temp_deg_f - 32) * (5/9) + 273.15
     return kelvin
 
@@ -160,6 +236,26 @@ def one_hot_encoding(data: pd.DataFrame,
                      sparse: bool = True,
                      drop: str = 'first'
                      ) -> typing.Tuple[pd.DataFrame, sklearn.preprocessing.OneHotEncoder]:
+    """This function creates a one-hot-encoder object and uses it to one-hot-encode an input dataframe.
+        For more details see https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.OneHotEncoder.html
+
+    Args:
+        data (pd.DataFrame): The input pandas dataframe.
+        one_hot_encode_columns (typing.List): A list of columns in the dataframe to one-hot-encode.
+        sparse (bool): Whether to return a sparse matrix of an array. For more details see:
+            https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.OneHotEncoder.html
+            Default is True.
+        drop (str): Parameter specifying whether/how to drop one of the categories from the one-hot-encoded columns.
+            For more details see:
+            https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.OneHotEncoder.html
+            Default is 'first'.
+
+    Returns:
+        data_one_hot_encoded, one_hot_encoder (typing.Tuple[pd.DataFrame, sklearn.preprocessing.OneHotEncoder]):
+            The function returns a tuple where the first element is the dataframe that is one-hot-encoded, and the
+            second element is the sklearn OneHotEncoder object.
+
+    """
 
     logger.info("Prior to One Hot Encoding, data has %d columns.", data.shape[1])
     data_one_hot_encoded = pd.DataFrame()
