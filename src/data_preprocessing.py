@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 def generate_features(data: pd.DataFrame,
                       create_datetime_features_params: dict,
-                      collapse_weather_categories_params: dict,
                       log_transform_params: dict,
                       binarize_column_params: dict,
                       remove_outlier_params: dict,
@@ -26,15 +25,14 @@ def generate_features(data: pd.DataFrame,
                       ) -> typing.Tuple[pd.DataFrame, pd.DataFrame, sklearn.preprocessing.OneHotEncoder]:
     """This function operates as an orchestration function that organizes the feature transformation function calls
         for the model pipeline. It issues function calls to do the following tasks: create datetime features,
-        binarize any columns, log transform any columns, consolidate sparse categories into more populous categories,
-        drop un-needed columns, remove outliers, one-hot-encode the data, and create the train-test-split.
+        binarize any columns, log transform any columns, drop un-needed columns, remove outliers,
+        one-hot-encode the data, and create the train-test-split.
         All of the exception handling happens inside the individual function calls.
 
 
     Args:
         data (pd.DataFrame): Input pandas dataframe.
         create_datetime_features_params (dict): Dictionary of parameters needed to create datetime features.
-        collapse_weather_categories_params (dict): Dictionary of parameters needed to consolidate weather categories.
         log_transform_params (dict): Dictionary of parameters needed to log transform any columns required.
         binarize_column_params (dict): Dictionary of parameters needed to binarize any columns required.
         remove_outlier_params (dict): Dictionary of parameters needed to remove outliers.
@@ -53,7 +51,6 @@ def generate_features(data: pd.DataFrame,
                 data_original_shape[0], data_original_shape[1])
     data = create_datetime_features(data, **create_datetime_features_params)
     data = binarize_column(data, **binarize_column_params)
-    data = collapse_weather_categories(data, **collapse_weather_categories_params)
     data = log_transform(data, **log_transform_params)
 
     cols_drop = drop_columns + \
@@ -92,27 +89,6 @@ def columns_drop(data: pd.DataFrame, columns: typing.List) -> pd.DataFrame:
     else:
         logger.info("Dropped the following columns from the dataset: %s",
                     str(columns))
-    return data
-
-def collapse_weather_categories(data: pd.DataFrame, weather_column: str, collapse_dict: dict):
-    """This function consolidates categories of a
-
-    Args:
-        data:
-        weather_column:
-        collapse_dict:
-
-    Returns:
-
-    """
-    for collapse_key in collapse_dict.keys():
-        records_to_collapse = \
-            data.loc[data[weather_column] == collapse_dict[collapse_key]["original_category"]].shape[0]
-        data.loc[data[weather_column] == collapse_dict[collapse_key]["original_category"], weather_column] = \
-            collapse_dict[collapse_key]["to_category"]
-        logger.info("Reassigned %d records with %s category of '%s' to '%s'", records_to_collapse, weather_column,
-                    collapse_dict[collapse_key]["original_category"], collapse_dict[collapse_key]["to_category"])
-
     return data
 
 
