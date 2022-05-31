@@ -1,12 +1,7 @@
 import logging
 import typing
 
-import numpy as np
 import pandas as pd
-import sklearn.preprocessing
-import joblib
-
-import src.read_write_s3
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +73,6 @@ def validate_user_input_dtype(input_dict: dict):
 
 
 def validate_dataframe(data: pd.DataFrame,
-                       expected_columns: typing.List,
                        duplicated_method: str) -> bool:
     """
     This function performs data validation on an input dataframe. It checks:
@@ -110,10 +104,10 @@ def validate_dataframe(data: pd.DataFrame,
         data_validated = False
     else:
         # For each column in the list of expected columns
-        for column in expected_columns:
-            if column not in data.columns:
-                logger.error("Data validation failed. Expected column '%s' was not present in the dataframe.", column)
-                data_validated = False
+        # for column in expected_columns:
+        #     if column not in data.columns:
+        #         logger.error("Data validation failed. Expected column '%s' was not present in the dataframe.", column)
+        #         data_validated = False
 
         # Count the number of duplicate and null values.
         count_duplicate_rows = data.duplicated(keep=duplicated_method).sum()
