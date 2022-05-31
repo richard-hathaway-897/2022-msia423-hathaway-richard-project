@@ -29,6 +29,8 @@ def read_yaml(config_path: str) -> dict:
     except FileNotFoundError as file_not_found:
         logger.error("Could not locate the specified configuration file. %s", file_not_found)
         logger.warning("Returning an empty dictionary.")
+    else:
+        logger.info("Successfully loaded configuration file.")
     return config_dict
 
 
