@@ -13,8 +13,8 @@ remove_outliers:
     weather_column: "weather_main"
     rain_column: "log_rain_1h"
   valid_values:
-    temp_min: 210
-    temp_max: 330
+    temp_min: 233.1
+    temp_max: 319.3
     log_rain_mm_min: 0
     log_rain_mm_max: 5.7
     clouds_min: 0
@@ -46,49 +46,51 @@ remove_outliers:
       - "Friday"
       - "Saturday"
 generate_features:
-  drop_columns:
-    - "snow_1h"
-    - "weather_description"
-    - "date_time"
-  create_datetime_features_params:
-    original_datetime_column: "date_time"
-    month_column: "month"
-    hour_column: "hour"
-    day_of_week_column: "day_of_week"
-  log_transform_params:
-    log_transform_column_names:
-      - "rain_1h"
-    log_transform_new_column_prefix: "log_"
-  binarize_column_params:
-    binarize_column_names:
-      - "holiday"
-    binarize_new_column_prefix: "binarize_"
-    binarize_zero_value: "None"
-  collapse_weather_categories_params:
-    collapse_1:
-      original_category: "Squall"
-      to_category: "Thunderstorm"
-    collapse_2:
-      original_category: "Smoke"
-      to_category: "Haze"
-  one_hot_encoding_params:
-    one_hot_encode_columns:
-      - "weather_main"
-      - "month"
-      - "hour"
-      - "day_of_week"
-    drop: "first"
-    sparse: False
-  train_test_split_params:
-    test_size: 0.2
-    random_state: 24
-    shuffle: True
+  pipeline_and_app:
+    log_transform_params:
+      log_transform_column_names:
+        - "rain_1h"
+      log_transform_new_column_prefix: "log_"
+    binarize_column_params:
+      binarize_column_names:
+        - "holiday"
+      binarize_new_column_prefix: "binarize_"
+      binarize_zero_value: "None"
+    collapse_weather_categories_params:
+      collapse_1:
+        original_category: "Squall"
+        to_category: "Thunderstorm"
+      collapse_2:
+        original_category: "Smoke"
+        to_category: "Haze"
+    one_hot_encoding_params:
+      one_hot_encode_columns:
+        - "weather_main"
+        - "month"
+        - "hour"
+        - "day_of_week"
+      drop: "first"
+      sparse: False
+  pipeline_only:
+    drop_columns:
+      - "snow_1h"
+      - "weather_description"
+      - "date_time"
+    create_datetime_features_params:
+      original_datetime_column: "date_time"
+      month_column: "month"
+      hour_column: "hour"
+      day_of_week_column: "day_of_week"
+    train_test_split_params:
+      test_size: 0.2
+      random_state: 24
+      shuffle: True
 
 
 model_training:
   random_forest:
     response_column: "traffic_volume"
-    n_estimators: 200
+    n_estimators: 50
     criterion: "squared_error"
     min_samples_split: 5
     max_features: "sqrt"
@@ -98,3 +100,14 @@ model_training:
 
 predict:
   response_column: "traffic_volume"
+
+process_user_input:
+  feature_columns:
+    holiday_column: "holiday"
+    month_column: "month"
+    hour_column: "hour"
+    day_of_week_column: "day_of_week"
+    temperature_column: "temp"
+    clouds_column: "clouds_all"
+    weather_column: "weather_main"
+    rain_column: "log_rain_1h"
