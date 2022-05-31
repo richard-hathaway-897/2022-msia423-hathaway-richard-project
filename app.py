@@ -42,7 +42,7 @@ query_manager = QueryManager(app)
 # Different functions that can take place in the app.
 # What function should be returned when someone goes to "/"
 @app.route('/')
-def index(prediction: float = 0):
+def index():
     """Main view that lists songs in the database.
 
      app/templates/index.html template.
@@ -53,7 +53,7 @@ def index(prediction: float = 0):
     """
 
     try:
-        user_query = query_manager.session.query(HistoricalQueries).order_by((app.config["ROW_SORT_BY"])).limit(
+        user_query = query_manager.session.query(HistoricalQueries).order_by(HistoricalQueries.query_count.desc()).limit(
             app.config["MAX_ROWS_SHOW"]).all()
         logger.debug("Retrieve top 5 historical queries.")
 

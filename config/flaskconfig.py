@@ -8,7 +8,6 @@ SQLALCHEMY_TRACK_MODIFICATIONS = True
 HOST = "0.0.0.0"
 SQLALCHEMY_ECHO = False  # If true, SQL for queries made will be printed
 MAX_ROWS_SHOW = 5
-ROW_SORT_BY = "query_count"
 
 PATH_TRAINED_MODEL_OBJECT = './models/trained_model_object.joblib'
 PATH_TRAINED_ONE_HOT_ENCODER = './models/ohe_object.joblib'
