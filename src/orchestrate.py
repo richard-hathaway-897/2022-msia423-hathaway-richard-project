@@ -50,14 +50,18 @@ def run_clean_data(command_line_args: argparse.Namespace, config_dict: dict) -> 
     try:
         raw_data = src.read_write_s3.s3_read(s3_source=command_line_args.input_source)
     except ValueError:
-        logger.error("Failed to read raw data from S3 for data cleaning.")
+        logger.error("Failed to read raw data from S3 for data cleaning. Failed to clean data.")
     else:
         valid_data = src.validate.validate_dataframe(
                      raw_data,
                      **config_dict["validate_dataframe"])
         if valid_data:
-            cleaned_data = src.clean_data.clean_data(data=raw_data, **config_dict["clean_data"])
-            src.read_write_functions.save_csv(cleaned_data, command_line_args.output_path)
+            try:
+                cleaned_data = src.clean_data.clean_data(data=raw_data, **config_dict["clean_data"])
+            except TypeError:
+                logger.error("Data Cleaning failed. Input dataframe was not a pandas dataframe.")
+            else:
+                src.read_write_functions.save_csv(cleaned_data, command_line_args.output_path)
         else:
             logger.warning("Did not clean data. Data validation failed.")
 
@@ -81,12 +85,16 @@ def run_generate_features(command_line_args: argparse.Namespace, config_dict: di
                                                      remove_outlier_params=config_dict["remove_outliers"],
                                                      **config_dict["generate_features"]["pipeline_and_app"],
                                                      **config_dict["generate_features"]["pipeline_only"])
-        train_data = src.clean_data.clean_data(data=train_data, **config_dict["clean_data"])
-        test_data = src.clean_data.clean_data(data=test_data, **config_dict["clean_data"])
 
         # Save the train and test data, and print out messages if successful.
-        src.read_write_functions.save_csv(train_data, command_line_args.train_output_source)
-        src.read_write_functions.save_csv(test_data, command_line_args.test_output_source)
+        if not train_data.empty:
+            src.read_write_functions.save_csv(train_data, command_line_args.train_output_source)
+        else:
+            logger.warning("Did not save training data. Creation of training data failed.")
+        if not test_data.empty:
+            src.read_write_functions.save_csv(test_data, command_line_args.test_output_source)
+        else:
+            logger.warning("Did not save test data. Creation of test data failed.")
         src.read_write_functions.save_model_object(one_hot_encoder, command_line_args.one_hot_path)
     else:
         logger.warning("Did not generate features. Data validation failed.")

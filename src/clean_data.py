@@ -15,12 +15,15 @@ def clean_data(data: pd.DataFrame, duplicated_method: str = "first") -> pd.DataF
 
     Returns:
         data (pd.DataFrame): This function returns a pandas dataframe with the cleaned data. If the data is not able to
-        be cleaned, an error message is logged and the original data object is returned.
+        be cleaned, a TypeError is raised.
+
+    Raises:
+        TypeError: A type error is raised if the input dataframe is not pandas dataframe.
 
     """
     if not isinstance(data, pd.DataFrame):
-        logger.error("Could not clean the input data. The input object was not a dataframe. Returning the original data.")
-        return data
+        logger.error("Could not clean the input data. The input object was not a dataframe.")
+        raise TypeError("Input data is not a pandas dataframe.")
     data_before_shape = data.shape
     logger.info("%d records and %d columns in input data.", data_before_shape[0], data_before_shape[1])
     count_duplicate_rows = data.duplicated(keep=duplicated_method).sum()
