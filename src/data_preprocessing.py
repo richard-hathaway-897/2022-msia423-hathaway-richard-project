@@ -232,8 +232,15 @@ def fahrenheit_to_kelvin(temp_deg_f: float) -> float:
     Returns:
         kelvin (float): The temperature converted to kelvin.
 
+    Raises:
+        TypeError: This function raises a type error if the input data type cannot be converted to Kelvin.
+
     """
-    kelvin = (temp_deg_f - 32) * (5/9) + 273.15
+    try:
+        kelvin = (temp_deg_f - 32) * (5/9) + 273.15
+    except TypeError as type_error:
+        logger.error("The value passed could not be converted to Kelvin. %s", type_error)
+        raise TypeError
     return kelvin
 
 
@@ -277,8 +284,6 @@ def one_hot_encoding(data: pd.DataFrame,
         data_one_hot_encoded = data.join(one_hot_df).drop(one_hot_encode_columns, axis=1)
         logger.info("One Hot Encoded the following columns: %s", str(one_hot_encode_columns))
         logger.info("After One Hot Encoding, data has %d columns.", data_one_hot_encoded.shape[1])
-
-
         logger.info("Number of NA values: %d", data_one_hot_encoded.isna().sum().sum())
 
     if data_one_hot_encoded.empty:
@@ -311,9 +316,7 @@ def create_train_test_split(
             data, test_size=test_size, random_state=random_state, shuffle=shuffle)
     except TypeError as type_error:
         # This error can occur if the input is not a dataframe
-        logger.error(
-            "Invalid input type. Check that the input is a dataframe. %s", type_error
-        )
+        logger.error("Invalid input type. Check that the input is a dataframe. %s", type_error)
         logger.warning("Returning two empty dataframes.")
         train, test = (pd.DataFrame(), pd.DataFrame())
     except ValueError as val_error:

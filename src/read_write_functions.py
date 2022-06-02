@@ -21,14 +21,13 @@ def read_yaml(config_path: str) -> dict:
         config_dict (dict): A dictionary containing the contents of the yaml file
 
     """
-    # Initialize an empty dictionary
     config_dict = {}
     try:
         with open(config_path) as config_file:
             config_dict = yaml.safe_load(config_file)
     except FileNotFoundError as file_not_found:
         logger.error("Could not locate the specified configuration file. %s", file_not_found)
-        logger.warning("Returning an empty dictionary.")
+        logger.warning("Returning empty dictionary.")
     else:
         logger.info("Successfully loaded configuration file.")
     return config_dict
@@ -59,7 +58,7 @@ def read_csv_url(data_source: str) -> pd.DataFrame():
     except urllib.error.URLError as url_error:
         # This error will occur if the website does not exist.
         logger.error("Could not read the data because the url was invalid: %s", url_error)
-    except pd.errors.ParserError as parser_error:
+    except pd.errors.ParserError:
         # error caused by data_source as https://archive.ics.uci.edu/ml/datasets/Metro+Interstate+Traffic+Volume
         logger.error("Could not read the data. This may occur if you fetch a website instead of a zipped csv file.")
     except Exception as unknown_error:
@@ -91,10 +90,8 @@ def read_csv(input_source: str) -> pd.DataFrame:
         logger.error("File could not be converted to a pandas dataframe.")
     else:
         # Log out the shape of the data.
-        logger.debug(
-            "Successfully read file with %d records and %d columns from %s",
-            data_input.shape[0], data_input.shape[1], input_source
-        )
+        logger.debug("Successfully read file with %d records and %d columns from %s",
+                     data_input.shape[0], data_input.shape[1], input_source)
     return data_input
 
 

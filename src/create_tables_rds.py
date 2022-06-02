@@ -181,7 +181,6 @@ class QueryManager:
     def create_like_dislike(self) -> None:
         session = self.session
         like_dislike_row = AppMetrics(likes=0, dislikes=0)
-        # TODO: exception handling
         session.add(like_dislike_row)
         session.commit()
         logger.info("Added like_dislike_row to the database.")
@@ -189,7 +188,6 @@ class QueryManager:
     def create_most_recent_query(self) -> None:
         session = self.session
         default_prediction = ActivePrediction(prediction=0, volume='Light')
-        # TODO: exception handling
         session.add(default_prediction)
         session.commit()
         logger.info("Added empty active prediction row to the database.")
@@ -216,7 +214,7 @@ def create_db(engine_string: str) -> None:
         logger.error("Could not create the sqlalchemy engine: %s", o_error)
 
     except Exception as other_exception:
-        logger.error(other_exception)
+        logger.error("Failed to create the sqlalchemy engine due to an unknown error.", other_exception)
 
     else:
         logger.debug("Successfully created engine.")

@@ -1,5 +1,5 @@
 """This module contains functions that orchestrate the different function calls needed for each step of the pipeline.
-Note that all the exception handling occurs in each of the modules called by these orchestrate functions.
+Note that almost all the exception handling occurs in each of the modules called by these orchestrate functions.
 
 """
 
@@ -58,6 +58,8 @@ def run_clean_data(command_line_args: argparse.Namespace, config_dict: dict) -> 
         if valid_data:
             cleaned_data = src.clean_data.clean_data(data=raw_data, **config_dict["clean_data"])
             src.read_write_functions.save_csv(cleaned_data, command_line_args.output_path)
+        else:
+            logger.warning("Did not clean data. Data validation failed.")
 
 def run_generate_features(command_line_args: argparse.Namespace, config_dict: dict) -> None:
     """This function calls the necessary functions to load data, generate features, and save the train/test data.
@@ -71,9 +73,7 @@ def run_generate_features(command_line_args: argparse.Namespace, config_dict: di
     """
     # Read the input cleaned data
     input_data = src.read_write_functions.read_csv(command_line_args.input_source)
-    valid_data = src.validate.validate_dataframe(
-        input_data,
-        **config_dict["validate_dataframe"])
+    valid_data = src.validate.validate_dataframe(input_data, **config_dict["validate_dataframe"])
 
     if valid_data:
         train_data, test_data, one_hot_encoder = \
@@ -87,6 +87,9 @@ def run_generate_features(command_line_args: argparse.Namespace, config_dict: di
         # Save the train and test data, and print out messages if successful.
         src.read_write_functions.save_csv(train_data, command_line_args.train_output_source)
         src.read_write_functions.save_csv(test_data, command_line_args.test_output_source)
+        src.read_write_functions.save_model_object(one_hot_encoder, command_line_args.one_hot_path)
+    else:
+        logger.warning("Did not generate features. Data validation failed.")
 
 def run_train_model(command_line_args: argparse.Namespace, config_dict: dict) -> None:
     """This function calls the necessary functions to load train data, fit the model object, and save the model_object.
@@ -111,7 +114,8 @@ def run_train_model(command_line_args: argparse.Namespace, config_dict: dict) ->
             logger.error("The response column was not found in the training data.")
         else:
             src.read_write_functions.save_model_object(trained_model, command_line_args.model_output_source)
-
+    else:
+        logger.warning("Model training did not occur. Data validation failed.")
 
 def run_predict(command_line_args: argparse.Namespace, config_dict: dict) -> None:
     """This function calls the necessary functions to load the test data and trained model object,
@@ -135,6 +139,8 @@ def run_predict(command_line_args: argparse.Namespace, config_dict: dict) -> Non
         if not predictions.empty:
             src.read_write_functions.save_csv(predictions,
                                               command_line_args.predictions_output_source)
+    else:
+        logger.warning("Model scoring did not occur. Data validation failed.")
 #
 def run_evaluate(command_line_args: argparse.Namespace, config_dict: dict) -> None:
     """This function calls the necessary functions to load the test data and model predictions,
@@ -160,3 +166,4 @@ def run_evaluate(command_line_args: argparse.Namespace, config_dict: dict) -> No
                                                          **config_dict["predict"])
         src.read_write_functions.save_dict_as_text(data=metrics_dict,
                                                    output_path=command_line_args.performance_metrics_output_source)
+    logger.warning("Model evaluation did not occur. Data validation failed.")
