@@ -14,11 +14,6 @@ import pytest
 import src.clean_data
 
 # Define the test dataframe values to pass to each function inside of each unit test.
-df_in_values_test_generate_features = [
-    [1, 2, np.nan],
-    [1, 2, 3],
-    [1, 2, 3]
-]
 
 # Define the test dataframe indices and columns
 # df_in_index_test_generate_features = [0, 1, 2]
