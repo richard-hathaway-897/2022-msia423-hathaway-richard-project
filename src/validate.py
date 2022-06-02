@@ -6,21 +6,6 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-
-# def validate_datatype(data, column_name, expected_dtype: str) -> bool:
-#     valid_data = True
-#     try:
-#         valid_dtype = data[column_name].dtype == expected_dtype
-#     except KeyError:
-#         logger.error("Data validation failed: column '%s' was not found in the dataframe.", column_name)
-#         valid_data = False
-#     else:
-#         if not valid_dtype:
-#             logger.error("Validation failed. Column '%s' in the data was not of type %s", column_name, column_dtype)
-#             valid_data = False
-#     return valid_data
-
-
 def validate_dataframe(data: pd.DataFrame,
                        duplicated_method: str) -> bool:
     """
@@ -52,11 +37,6 @@ def validate_dataframe(data: pd.DataFrame,
         logger.warning("Data validation failed. The dataframe is empty.")
         data_validated = False
     else:
-        # For each column in the list of expected columns
-        # for column in expected_columns:
-        #     if column not in data.columns:
-        #         logger.error("Data validation failed. Expected column '%s' was not present in the dataframe.", column)
-        #         data_validated = False
 
         # Count the number of duplicate and null values.
         count_duplicate_rows = data.duplicated(keep=duplicated_method).sum()
