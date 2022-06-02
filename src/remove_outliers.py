@@ -55,7 +55,8 @@ def remove_outliers(data: pd.DataFrame,
     return data
 
 
-def filter_data(data, column_name, min_value = 0, max_value = 0, valid_categories=[], categorical = False):
+def filter_data(data, column_name, min_value=0, max_value=0, valid_categories=[], categorical = False):
+    initial_shape = data.shape
     error = False
     if not categorical:
         try:
@@ -84,5 +85,7 @@ def filter_data(data, column_name, min_value = 0, max_value = 0, valid_categorie
             error = True
     if error:
         data = pd.DataFrame()
+    final_shape = data.shape
+    logger.debug("Removed %d records that matched the outlier criteria for '%s'.", initial_shape[0] - final_shape[0], column_name)
 
     return data
