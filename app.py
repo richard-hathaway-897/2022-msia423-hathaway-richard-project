@@ -1,6 +1,5 @@
 import logging.config
 import sqlite3
-import traceback
 
 import sqlalchemy.exc
 from flask import Flask, render_template, request, redirect, url_for
@@ -58,65 +57,29 @@ def index():
         logger.debug("Retrieve top 5 historical queries.")
 
         # Return template if the search to index.html succeeds
-    except sqlite3.OperationalError as e:
-        logger.error(
-            "Error page returned. Not able to query local sqlite database: %s."
-            " Error: %s ",
-            app.config['SQLALCHEMY_DATABASE_URI'], e)
-        return render_template('error.html')
-    except sqlalchemy.exc.OperationalError as e:
-        logger.error(
-            "Error page returned. Not able to query MySQL database: %s. "
-            "Error: %s ",
-            app.config['SQLALCHEMY_DATABASE_URI'], e)
-        return render_template('error.html')
-    except:
-        traceback.print_exc()
-        logger.error("Not able to display the historical queries, error page returned")
+    except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
+        logger.error("Not able to query the database: %s. %s ",
+                     app.config['SQLALCHEMY_DATABASE_URI'], database_exception)
         return render_template('error.html')
 
     try:
         most_recent_prediction = query_manager.session.query(ActivePrediction).first()
         logger.debug("Retrieve most recent prediction.")
         # Return template if the search to index.html succeeds
-    except sqlite3.OperationalError as e:
-        logger.error(
-            "Error page returned. Not able to retrieve most recent prediction from local sqlite database: %s."
-            " Error: %s ",
-            app.config['SQLALCHEMY_DATABASE_URI'], e)
-        return render_template('error.html')
-    except sqlalchemy.exc.OperationalError as e:
-        logger.error(
-            "Error page returned. Not able to retrieve most recent prediction from MySQL database: %s. "
-            "Error: %s ",
-            app.config['SQLALCHEMY_DATABASE_URI'], e)
-        return render_template('error.html')
-    except:
-        traceback.print_exc()
-        logger.error("Not able to retrieve most recent prediction, error page returned")
+    except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
+        logger.error("Not able to retrieve the active prediction from the database: %s. %s ",
+                     app.config['SQLALCHEMY_DATABASE_URI'], database_exception)
         return render_template('error.html')
 
     try:
         like_dislike_count = query_manager.session.query(AppMetrics).all()
         logger.info("Retrieve likes and dislikes.")
-    except sqlite3.OperationalError as e:
-        logger.error(
-            "Error page returned. Not able to query local sqlite database: %s."
-            " Error: %s ",
-            app.config['SQLALCHEMY_DATABASE_URI'], e)
-        return render_template('error.html')
-    except sqlalchemy.exc.OperationalError as e:
-        logger.error(
-            "Error page returned. Not able to query MySQL database: %s. "
-            "Error: %s ",
-            app.config['SQLALCHEMY_DATABASE_URI'], e)
-        return render_template('error.html')
-    except:
-        traceback.print_exc()
-        logger.error("Not able to display likes and dislikes, error page returned")
+    except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
+        logger.error("Not able to retrieve the likes and dislikes from the database: %s. %s ",
+                     app.config['SQLALCHEMY_DATABASE_URI'], database_exception)
         return render_template('error.html')
 
-    logger.debug("Index page accessed")
+    logger.debug("Navigate to Index page.")
     return render_template('index.html',
                            user_query=user_query,
                            like_dislike_count=like_dislike_count,
@@ -128,7 +91,6 @@ def index():
 def enter_query_parameters():
     """
     """
-    # TODO: Is hardcoding these column names bad?
     new_query_params = {}
     new_query_params["temp"] = request.form["temperature"]
     new_query_params["clouds_all"] = request.form["cloud_percentage"]
@@ -147,30 +109,35 @@ def enter_query_parameters():
     try:
         prediction, traffic_volume = \
             src.app_module.run_app_prediction(new_query_params,
-                                             model_object_path=app.config["PATH_TRAINED_MODEL_OBJECT"],
-                                             one_hot_encoder_path=app.config["PATH_TRAINED_ONE_HOT_ENCODER"],
-                                             config_dict=config_dict)
+                                              model_object_path=app.config["PATH_TRAINED_MODEL_OBJECT"],
+                                              one_hot_encoder_path=app.config["PATH_TRAINED_ONE_HOT_ENCODER"],
+                                              config_dict=config_dict)
     except FileNotFoundError:
         logger.error("Could not load model object.")
         return render_template('error.html')
-    except ValueError:
-        logger.error("Error: no prediction was made.")
+    except (ValueError, KeyError):
+        logger.error("Error: Prediction could not be made due to invalid input or invalid configurations.")
         return render_template('invalid_input.html')
 
-    else:
+    try:
+        src.app_module.run_update_historical_queries(query_manager=query_manager,
+                                                     new_query_params=new_query_params,
+                                                     database_uri_string=app.config['SQLALCHEMY_DATABASE_URI'],
+                                                     prediction=np.round(prediction[0]))
+    except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
+        logger.error("Error occurred updating the historical queries table. %s", database_exception)
+        return render_template('error.html')
 
-        update_error = src.app_module.run_update_tables(query_manager=query_manager,
-                                                         new_query_params=new_query_params,
-                                                         database_uri_string=app.config['SQLALCHEMY_DATABASE_URI'],
-                                                         prediction=np.round(prediction[0]),
-                                                         traffic_volume=traffic_volume)
-        if update_error:
-            return render_template('error.html')
-        else:
-            return redirect(url_for('index'))
+    try:
+        src.app_module.run_update_active_prediction(query_manager=query_manager,
+                                                    database_uri_string=app.config['SQLALCHEMY_DATABASE_URI'],
+                                                    prediction=np.round(prediction[0]),
+                                                    traffic_volume=traffic_volume)
+    except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
+        logger.error("Error occurred updating the active prediction. %s", database_exception)
+        return render_template('error.html')
 
-
-
+    return redirect(url_for('index'))
 
 
 @app.route('/like', methods=['POST'])
@@ -179,64 +146,39 @@ def increment_like_dislike():
     """
     try:
         row_count = query_manager.session.query(AppMetrics).count()
-    except sqlite3.OperationalError as e:
-        logger.error(
-            "Error page returned. Not able to query likes/dislikes table in local sqlite "
-            "database: %s. Error: %s ",
-            app.config['SQLALCHEMY_DATABASE_URI'], e)
-    except sqlalchemy.exc.OperationalError as e:
-        logger.error(
-            "Error page returned. Not able to query likes/dislikes table in MySQL database: %s. "
-            "Error: %s ",
-            app.config['SQLALCHEMY_DATABASE_URI'], e)
-    else:
+    except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
+        logger.error("Not able to query likes/dislikes table in the"
+                     "database: %s. %s ", app.config['SQLALCHEMY_DATABASE_URI'], database_exception)
+        return render_template('error.html')
 
-        if row_count == 0:
-            try:
-                query_manager.create_like_dislike()
-            except sqlite3.OperationalError as e:
-                logger.error(
-                    "Error page returned. Not able to create an empty row in the AppMetrics table in local sqlite "
-                    "database: %s. Error: %s ",
-                    app.config['SQLALCHEMY_DATABASE_URI'], e)
-            except sqlalchemy.exc.OperationalError as e:
-                logger.error(
-                    "Error page returned. Not able to create an empty row in the AppMetrics table in MySQL database: %s. "
-                    "Error: %s ",
-                    app.config['SQLALCHEMY_DATABASE_URI'], e)
-            else:
-                logger.info("Created an empty row in likes/dislikes table.")
-
-        if request.form["choice"] == "Like":
-            try:
-                query_manager.increment_like()
-            except sqlite3.OperationalError as e:
-                logger.error(
-                    "Error page returned. Not able to increment likes in the AppMetrics table in local sqlite "
-                    "database: %s. Error: %s ",
-                    app.config['SQLALCHEMY_DATABASE_URI'], e)
-            except sqlalchemy.exc.OperationalError as e:
-                logger.error(
-                    "Error page returned. Not able to increment likes in the AppMetrics table in MySQL database: %s. "
-                    "Error: %s ",
-                    app.config['SQLALCHEMY_DATABASE_URI'], e)
-            else:
-                logger.info("Incremented the likes.")
+    if row_count == 0:
+        try:
+            query_manager.create_like_dislike()
+        except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
+            logger.error("Not able to create row likes/dislikes table in the"
+                         "database: %s. %s ", app.config['SQLALCHEMY_DATABASE_URI'], database_exception)
+            return render_template('error.html')
         else:
-            try:
-                query_manager.increment_dislike()
-            except sqlite3.OperationalError as e:
-                logger.error(
-                    "Error page returned. Not able to increment dislikes in the AppMetrics table in local sqlite "
-                    "database: %s. Error: %s ",
-                    app.config['SQLALCHEMY_DATABASE_URI'], e)
-            except sqlalchemy.exc.OperationalError as e:
-                logger.error(
-                    "Error page returned. Not able to increment dislikes in the AppMetrics table in MySQL database: %s. "
-                    "Error: %s ",
-                    app.config['SQLALCHEMY_DATABASE_URI'], e)
-            else:
-                logger.info("Incremented the dislikes.")
+            logger.info("Created an empty row in likes/dislikes table.")
+
+    if request.form["choice"] == "Like":
+        try:
+            query_manager.increment_like()
+        except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
+            logger.error("Not able to increment number of likes in the"
+                         "database: %s. %s ", app.config['SQLALCHEMY_DATABASE_URI'], database_exception)
+            return render_template('error.html')
+        else:
+            logger.info("Incremented the likes.")
+    else:
+        try:
+            query_manager.increment_dislike()
+        except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
+            logger.error("Not able to increment number of dislikes in the"
+                         "database: %s. %s ", app.config['SQLALCHEMY_DATABASE_URI'], database_exception)
+            return render_template('error.html')
+        else:
+            logger.info("Incremented the dislikes.")
     return redirect(url_for('index'))
 
 

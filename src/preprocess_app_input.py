@@ -1,5 +1,4 @@
 import logging
-import typing
 
 import pandas as pd
 
@@ -11,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 def predict_preprocess(predictors: dict,
-                       collapse_weather_categories_params: dict,
                        binarize_column_params: dict,
                        log_transform_params: dict,
                        remove_outlier_params: dict,
@@ -23,17 +21,22 @@ def predict_preprocess(predictors: dict,
         predictors_dict_as_single_item_lists[column_name] = [value]
     prediction_df = pd.DataFrame(predictors_dict_as_single_item_lists)
 
-    prediction_df = app_input_transformations(prediction_df=prediction_df,
-                                              collapse_weather_categories_params=collapse_weather_categories_params,
-                                              log_transform_params=log_transform_params,
-                                              binarize_column_params=binarize_column_params,
-                                              remove_outlier_params=remove_outlier_params)
-    data_one_hot_encoded = app_input_one_hot_encode(prediction_df=prediction_df,
-                                                    one_hot_encoder=one_hot_encoder,
-                                                    one_hot_encode_columns=one_hot_encoding_params["one_hot_encode_columns"])
+    try:
+        prediction_df = app_input_transformations(prediction_df=prediction_df,
+                                                  log_transform_params=log_transform_params,
+                                                  binarize_column_params=binarize_column_params,
+                                                  remove_outlier_params=remove_outlier_params)
+    except ValueError as val_error:
+        logger.error("Failed to complete data preprocessing transformations of user input.")
+        raise val_error
 
-    if data_one_hot_encoded.empty:
-        raise ValueError
+    try:
+        data_one_hot_encoded = app_input_one_hot_encode(prediction_df=prediction_df,
+                                                        one_hot_encoder=one_hot_encoder,
+                                                        one_hot_encode_columns=one_hot_encoding_params["one_hot_encode_columns"])
+    except KeyError as key_error:
+        logger.info("Failed to one-hot-encoded the user input.")
+        raise key_error
 
     return data_one_hot_encoded
 
@@ -55,13 +58,20 @@ def app_input_transformations(prediction_df,
                                                         **remove_outlier_params["feature_columns"],
                                                         **remove_outlier_params["valid_values"],
                                                         include_response=False)
+    if prediction_df.empty:
+        raise ValueError("Failed to completed data preprocessing steps.")
     prediction_df = prediction_df.reset_index(drop=True)
     return prediction_df
 
 
 def app_input_one_hot_encode(prediction_df, one_hot_encoder, one_hot_encode_columns):
 
-    one_hot_array = one_hot_encoder.transform(prediction_df[one_hot_encode_columns])
+    try:
+        one_hot_array = one_hot_encoder.transform(prediction_df[one_hot_encode_columns])
+    except KeyError as key_error:
+        logger.error("Could not one-hot-encode the user input. "
+                     "The one-hot-encode columns specified do not exist in the data. %s", key_error)
+        raise key_error
     one_hot_column_names = one_hot_encoder.get_feature_names_out()
     one_hot_df = pd.DataFrame(one_hot_array, columns=one_hot_column_names)
     data_one_hot_encoded = prediction_df.join(one_hot_df).drop(one_hot_encode_columns, axis=1)
@@ -70,19 +80,22 @@ def app_input_one_hot_encode(prediction_df, one_hot_encoder, one_hot_encode_colu
     return data_one_hot_encoded
 
 
-def validate_app_input(input_dict: dict, validate_user_input_params):
+def validate_app_input(input_dict: dict, validate_user_input_params: dict):
     valid_input = True
     if not isinstance(input_dict, dict):
+        logger.error("Invalid data type. The input data is not in the form of dictionary.")
         valid_input = False
     elif not len(input_dict) > 0:
+        logger.error("The input data is empty.")
         valid_input = False
     else:
         try:
             input_dict = validate_app_input_dtype(input_dict, **validate_user_input_params)
         except ValueError:
             valid_input = False
+            logger.error("The input data's data types could not be validated.")
     if not valid_input:
-        raise ValueError
+        raise ValueError("The input data could not be validated.")
     return input_dict
 
 
@@ -113,7 +126,7 @@ def validate_app_input_dtype(input_dict: dict,
                 valid_input = False
 
     if not valid_input:
-        raise ValueError
+        raise ValueError("The input data types were not valid.")
 
     return new_query_params
 
