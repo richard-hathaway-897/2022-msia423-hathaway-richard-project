@@ -48,7 +48,11 @@ def run_app_prediction(new_query_params: dict, model_object_path: str, one_hot_e
         logger.error("No prediction was made.")
         raise ValueError("The prediction could not be made.")
     else:
-        traffic_volume = src.predict.classify_traffic(prediction[0])
+        try:
+            traffic_volume = src.predict.classify_traffic(prediction[0])
+        except ValueError as val_error:
+            logger.error("The input prediction was negative.")
+            raise val_error
 
     logger.info("Prediction: %f", prediction[0])
 
