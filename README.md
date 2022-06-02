@@ -114,9 +114,20 @@ To build the image, run from this directory (the root of the repo):
 To create the database in the location configured in `config.py` run: 
 
 ```bash
-docker run --mount type=bind,source="$(pwd)"/data,target=/app/data/ trafficpredictiondb create_db  --engine_string=sqlite:///data/richard.db
+docker run -e SQLALCHEMY_DATABASE_URI --mount type=bind,source="$(pwd)"/data,target=/app/data/ trafficpredictiondb create_db  --engine_string=${SQLALCHEMY_DATABASE_URI}
 ```
 The `--mount` argument allows the app to access your local `data/` folder and save the SQLite database there so it is available after the Docker container finishes.
+
+#### Run the entire pipeline
+To run the entire pipeline, run: 
+
+```bash
+docker build -f dockerfiles/Dockerfile.pipeline -t final-project-pipeline .
+```
+
+```bash
+docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY --mount type=bind,source="$(pwd)"/data,target=/app/data/ final-project-pipeline run-pipeline.sh
+```
 
 
 #### Adding songs 
@@ -183,7 +194,7 @@ This command builds the Docker image, with the tag `pennylaneapp`, based on the 
 To run the Flask app, run: 
 
 ```bash
- docker run --name test-app --mount type=bind,source="$(pwd)"/data,target=/app/data/ -p 5000:5000 trafficpredictionapp
+ docker run -e SQLALCHEMY_DATABASE_URI --name test-app --mount type=bind,source="$(pwd)"/data,target=/app/data/ -p 5000:5000 trafficpredictionapp
 ```
 You should be able to access the app at http://127.0.0.1:5000/ in your browser (Mac/Linux should also be able to access the app at http://127.0.0.1:5000/ or localhost:5000/) .
 
