@@ -151,6 +151,8 @@ def binarize(value: str, zero_value: str) -> int:
 
     """
     return_value = 1
+    if not isinstance(zero_value, str):
+        return return_value
     if value == zero_value:
         return_value = 0
 
@@ -183,7 +185,7 @@ def create_datetime_features(data: pd.DataFrame,
                      "The specified date time column %s does not exist in the dataframe.",
                      original_datetime_column)
     else:
-
+        # Drop any rows with invalid dates.
         data.dropna(axis=0, subset=[original_datetime_column], inplace=True)
 
         data[month_column] = data[original_datetime_column].dt.month
@@ -214,8 +216,8 @@ def validate_date_time(date_time_string: str) -> typing.Union[datetime.datetime,
     date_time = None
     try:
         date_time = pd.to_datetime(date_time_string)
-    except dateutil.parser._parser.ParseError as invalid_date:
-        logger.error("Invalid date found, removing record. ", invalid_date)
+    except dateutil.parser._parser.ParserError as invalid_date:
+        logger.error("Invalid date found, removing record. %s", invalid_date)
         return date_time
     else:
         return date_time
@@ -288,6 +290,9 @@ def one_hot_encoding(data: pd.DataFrame,
 
     if data_one_hot_encoded.empty:
         logger.warning("One Hot Encoding Failed. Returning empty dataframe.")
+
+
+
     return data_one_hot_encoded, one_hot_encoder
 
 def create_train_test_split(
