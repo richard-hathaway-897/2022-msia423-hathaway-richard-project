@@ -6,9 +6,6 @@ import sklearn.model_selection
 import sklearn.base
 import sklearn.exceptions
 
-import src.read_write_s3
-import src.data_preprocessing
-
 logger = logging.getLogger(__name__)
 
 
@@ -61,6 +58,8 @@ def make_predictions(new_data: pd.DataFrame, model: sklearn.base.BaseEstimator, 
 
 
 def classify_traffic(traffic_prediction: float) -> str:
+    if traffic_prediction < 0:
+        raise ValueError("Received a negative prediction.")
     if traffic_prediction < 2000:
         return "light"
     elif traffic_prediction < 3000:
