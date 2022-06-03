@@ -58,23 +58,6 @@ remove_outlier_params = {
 
 }
 
-# def test_predict_preprocess():
-#     train_one_hot_encoder_input = [
-#        [5, 8, "Tuesday", "Clouds"],
-#        [6, 9, "Wednesday", "Mist"]
-#        [10, 9, "Wednesday", "Mist"]
-#     ]
-#     df_train_one_hot_encoder = pd.DataFrame(data=train_one_hot_encoder_input, columns=["column1", "column2"])
-#
-#     one_hot_encoder = OneHotEncoder(drop='first', sparse=False)
-#     one_hot_encoder = one_hot_encoder.fit(df_train_one_hot_encoder[["column2"]])
-#
-#     input_test = {"temp": 32, "clouds_all": 40, "weather_main": "Clouds", "month": 10, "hour":9,
-#                   "day_of_week": "Tuesday", "holiday": "None", "rain_1h":0.0}
-#     df_input_test = pd.DataFrame(data=input_test, columns=["temp", "clouds_all", "weather_main",
-#                                                            "month", "hour", "day_of_week", "holiday",
-#                                                            "rain_1h"])
-
 def test_app_input_transformations():
     input_test = [
         [32, 40, "Clouds", 10, 9, "Tuesday", "None", 0.0]

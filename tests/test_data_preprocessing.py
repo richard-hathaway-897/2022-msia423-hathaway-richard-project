@@ -5,42 +5,6 @@ import pytest
 
 import src.data_preprocessing
 
-# def test_generate_features():
-#     input_test = [
-#             [1.0, 2.0, "None", "2022-05-31 08:00:00"],
-#             [1.0, 2.0, "other_value", "2022-05-31 08:00:00"]
-#         ]
-#     df_input_test = pd.DataFrame(data=input_test, columns=["column1", "column2", "column3", "date_time"])
-#     expected_output_train = [
-#             [1.0, 5, 8, "Tuesday", 0.0, np.log1p(2.0)]
-#         ]
-#     df_expected_output_train = pd.DataFrame(data=expected_output_train,
-#                                             columns=["column1", "month", "hour", "day_of_week", "binarize_column3", "log_column2"])
-#     expected_output_test = [
-#             [1.0, 5, 8, "Tuesday", 0.0, np.log1p(2.0)]
-#         ]
-#     df_expected_output_test = pd.DataFrame(data=expected_output_train,
-#                                            columns=["column1", "month", "hour", "day_of_week", "binarize_column3",
-#                                                      "log_column2"])
-#
-#     log_transform_params = {'log_transform_column_names': 'column2', 'log_transform_new_column_prefix': 'log_'}
-#
-#     binarize_column_params = {'binarize_column_names': "holiday",
-#                               'binarize_new_column_prefix': 'binarize_',
-#                               'binarize_zero_value': "None"}
-#
-#     one_hot_encoding_params = {"one_hot_encode_columns": []}
-#
-#     drop_columns = ["column2", "column3", "date_time"]
-#
-#     create_datetime_features_params = {"original_datetime_column": "date_time",
-#                                        "month_column": "month",
-#                                        "hour_column": "hour",
-#                                        "day_of_week_column": "day_of_week"}
-#
-#     train_test_split_params = {"test_size": 0.5, "random_state": 24, "shuffle": True}
-#
-#     df_output_train, df_output_test, output_one_hot_encoder = src.data_preprocessing.generate_features()
 
 def test_columns_drop():
 
