@@ -1,4 +1,5 @@
 import logging
+import typing
 
 import pandas as pd
 
@@ -6,29 +7,61 @@ logger = logging.getLogger(__name__)
 
 
 def remove_outliers(data: pd.DataFrame,
-                    weather_column,
-                    day_of_week_column,
-                    temperature_column,
-                    clouds_column,
-                    rain_column,
-                    hour_column,
-                    month_column,
-                    temp_min,
-                    temp_max,
-                    log_rain_mm_min,
-                    log_rain_mm_max,
-                    clouds_min,
-                    clouds_max,
-                    hours_min,
-                    hours_max,
-                    month_min,
-                    month_max,
-                    valid_week_days,
-                    valid_weather,
-                    response_min=0,
-                    response_max=10000,
-                    response_column="traffic_volume",
-                    include_response=True) -> pd.DataFrame:
+                    weather_column: str,
+                    day_of_week_column: str,
+                    temperature_column: str,
+                    clouds_column: str,
+                    rain_column: str,
+                    hour_column: str,
+                    month_column: str,
+                    temp_min: float,
+                    temp_max: float,
+                    log_rain_mm_min: float,
+                    log_rain_mm_max: float,
+                    clouds_min: float,
+                    clouds_max: float,
+                    hours_min: int,
+                    hours_max: int,
+                    month_min: int,
+                    month_max: int,
+                    valid_week_days: typing.List,
+                    valid_weather: typing.List,
+                    response_min: float = 0,
+                    response_max: float = 10000,
+                    response_column: str = "traffic_volume",
+                    include_response: bool = True) -> pd.DataFrame:
+    """This function removes outliers for each column in the weather dataset based on the min/max allowable values
+    or the valid categories.
+
+    Args:
+        data (pd.DataFrame): The input dataframe.
+        weather_column (str): The name of the column containing the weather.
+        day_of_week_column (str): The name of the column containing the day of the week.
+        temperature_column (str): The name of the column containing the temperature.
+        clouds_column (str): The name of the column containing the clouds.
+        rain_column (str): The name of the column containing the rain last hour information.
+        hour_column (str): The name of the column containing the hour.
+        month_column (str): The name of the column containing the month.
+        temp_min (float): The minimum allowable temperature.
+        temp_max (float): The maximum allowable temperature.
+        log_rain_mm_min (float): The minimum allowable log_rain
+        log_rain_mm_max (float): The maximmum allowable log_rain
+        clouds_min (float): The minimum allowable cloud percentage
+        clouds_max (float): The maximum allowable cloud percentage
+        hours_min (int): The minimum allowable hour
+        hours_max (int): The maximum allowable hour
+        month_min (int): The minimum allowable month
+        month_max (int): The maximum allowable month
+        valid_week_days (typing.List): A list of valid week days
+        valid_weather (typing.List): A list of valid weather categories
+        response_min (float): The minimum allowable value for the response column.
+        response_max (float): The maximum allowable value for the response column.
+        response_column (str): The name of the response column.
+        include_response (bool): Boolean indicating whether the response column is included in the input data.
+
+    Returns:
+        data (pd.DataFrame): The dataframe with the outliers removed.
+    """
     # Note, filter data checks whether or not the column exists and if the data types match.
     data_shape = data.shape
     data = filter_data(data, column_name=temperature_column, min_value=temp_min, max_value=temp_max)
