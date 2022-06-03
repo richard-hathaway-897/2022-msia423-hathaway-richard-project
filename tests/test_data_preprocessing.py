@@ -233,36 +233,79 @@ def test_fahrenheit_to_kelvin():
     test_output = src.data_preprocessing.fahrenheit_to_kelvin(32)
     assert expected_output == test_output
 
+
 def test_fahrenheit_to_kelvin_invalid_datatype():
     with pytest.raises(TypeError):
         src.data_preprocessing.fahrenheit_to_kelvin(temp_deg_f="abc")
 
-# def test_one_hot_encoding():
-#     input_test = [
-#         [1.0, "A"],
-#         [1.0, "B"]
-#     ]
-#     df_input_test = pd.DataFrame(data=input_test, columns=["column1", "column2"])
-#
-#     expected_output = [
-#         [1.0, 0.0],
-#         [1.0, 1.0]
-#     ]
-#     df_expected_output = pd.DataFrame(data=expected_output,
-#                                       columns=["column1", "column2_B"])
-#
-#     expected_one_hot_encoder = sklearn.preprocessing.OneHotEncoder(drop='first', sparse=True)
-#     #expected_one_hot_encoder.fit_transform(df_input_test["column2"])
-#
-#     expected_output_tuple = (df_expected_output, "one_hot_encoder")
-#
-#     df_test_output, test_output_one_hot_encoder = src.data_preprocessing.one_hot_encoding(data=df_input_test,
-#                                                                                           one_hot_encode_columns=["column2"],
-#                                                                                           sparse=True,
-#                                                                                           drop="first")
-#
-#     #pd.testing.assert_frame_equal(df_expected_output, df_test_output)
-#     assert expected_one_hot_encoder == test_output_one_hot_encoder
+
+def test_one_hot_encoding():
+    input_test = [
+        [1.0, "A"],
+        [1.0, "B"]
+    ]
+    df_input_test = pd.DataFrame(data=input_test, columns=["column1", "column2"])
+
+    expected_output = [
+        [1.0, 0.0],
+        [1.0, 1.0]
+    ]
+    df_expected_output = pd.DataFrame(data=expected_output,
+                                      columns=["column1", "column2_B"])
+
+    expected_one_hot_encoder = sklearn.preprocessing.OneHotEncoder(drop='first', sparse=False)
+    expected_one_hot_encoder.fit(df_input_test[["column2"]])
+
+    df_test_output, test_output_one_hot_encoder = src.data_preprocessing.one_hot_encoding(data=df_input_test,
+                                                                                          one_hot_encode_columns=["column2"],
+                                                                                          sparse=False,
+                                                                                          drop="first")
+
+    pd.testing.assert_frame_equal(df_expected_output, df_test_output)
+    assert expected_one_hot_encoder.get_params() == test_output_one_hot_encoder.get_params()
+
+def test_one_hot_encoding():
+    input_test = [
+        [1.0, "A"],
+        [1.0, "B"]
+    ]
+    df_input_test = pd.DataFrame(data=input_test, columns=["column1", "column2"])
+
+    expected_output = [
+        [1.0, 0.0],
+        [1.0, 1.0]
+    ]
+    df_expected_output = pd.DataFrame(data=expected_output,
+                                      columns=["column1", "column2_B"])
+
+    expected_one_hot_encoder = sklearn.preprocessing.OneHotEncoder(drop='first', sparse=False)
+    expected_one_hot_encoder.fit(df_input_test[["column2"]])
+
+    df_test_output, test_output_one_hot_encoder = src.data_preprocessing.one_hot_encoding(data=df_input_test,
+                                                                                          one_hot_encode_columns=["column2"],
+                                                                                          sparse=False,
+                                                                                          drop="first")
+
+    pd.testing.assert_frame_equal(df_expected_output, df_test_output)
+    assert expected_one_hot_encoder.get_params() == test_output_one_hot_encoder.get_params()
+
+def test_one_hot_encoding_invalid_columns():
+    input_test = [
+        [1.0, "A"],
+        [1.0, "B"]
+    ]
+    df_input_test = pd.DataFrame(data=input_test, columns=["column1", "column2"])
+
+    df_expected_output = pd.DataFrame()
+    expected_one_hot_encoder = sklearn.preprocessing.OneHotEncoder(drop='first', sparse=False)
+
+    df_test_output, test_output_one_hot_encoder = src.data_preprocessing.one_hot_encoding(data=df_input_test,
+                                                                                          one_hot_encode_columns=["INVALID_COLUMN"],
+                                                                                          sparse=False,
+                                                                                          drop="first")
+
+    pd.testing.assert_frame_equal(df_expected_output, df_test_output)
+    assert expected_one_hot_encoder.get_params() == test_output_one_hot_encoder.get_params()
 
 def test_create_train_test_split():
     input_test = [
@@ -297,9 +340,7 @@ def test_create_train_test_split_invalid_parameters():
     ]
     df_input_test = pd.DataFrame(data=input_test, columns=["column1", "column2"])
 
-
     df_expected_output_train = pd.DataFrame()
-
     df_expected_output_test = pd.DataFrame()
 
     df_output_train, df_output_test = src.data_preprocessing.create_train_test_split(data = df_input_test,
