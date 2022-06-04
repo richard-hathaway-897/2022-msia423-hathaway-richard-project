@@ -1,12 +1,12 @@
 import logging.config
 import typing
 import os
+import urllib.error
 
 import yaml
 import pandas as pd
 import joblib
 import sklearn
-import urllib.error
 
 logger = logging.getLogger(__name__)
 
@@ -20,9 +20,12 @@ def read_yaml(config_path: str) -> dict:
     Returns:
         config_dict (dict): A dictionary containing the contents of the yaml file
 
+    Raises:
+        FileNotFoundError: This function raises a FileNotFoundError if the YAML file cannot be located.
+
     """
     try:
-        with open(config_path) as config_file:
+        with open(config_path, encoding="utf-8") as config_file:
             config_dict = yaml.safe_load(config_file)
     except FileNotFoundError as file_not_found:
         logger.error("Could not locate the specified configuration file. %s", file_not_found)
@@ -40,8 +43,7 @@ def read_csv_url(data_source: str) -> pd.DataFrame():
         data_source (str): The URL source of the csv file.
 
     Returns:
-        raw_data (pd.DataFrame): A pandas dataframe with the data read from the source. If reading the URL fails,
-        an empty dataframe is returned.
+        raw_data (pd.DataFrame): A pandas dataframe with the data read from the source.
 
     Raises:
         ValueError: This function raises a ValueError if the reading/ingestion fails.
@@ -60,9 +62,6 @@ def read_csv_url(data_source: str) -> pd.DataFrame():
     except pd.errors.ParserError:
         # error caused by data_source as https://archive.ics.uci.edu/ml/datasets/Metro+Interstate+Traffic+Volume
         logger.error("Could not read the data. This may occur if you fetch a website instead of a zipped csv file.")
-    except Exception as unknown_error:
-        # This error will catch any other potential exceptions
-        logger.error("Could not read the data because an unknown error occured. %s", unknown_error)
     else:
         # If the data source is successfully read, log the message and try to upload the dataframe to S3.
         logger.info("Successfully read data from: %s", data_source)
@@ -80,6 +79,9 @@ def read_csv(input_source: str) -> pd.DataFrame:
 
     Returns:
         data_input (pd.DataFrame): The dataframe containing the contents of the csv file.
+
+    Raises:
+        ValueError: This function raises a ValueError if the reading/ingestion fails.
     """
     data_input = pd.DataFrame()
     try:
@@ -108,6 +110,10 @@ def load_model_object(model_input_source: str) -> sklearn.base.BaseEstimator:
 
     Returns:
         model (sklearn.base.BaseEstimator): The sklearn trained model object loaded in.
+
+    Raises:
+        ValueError: This function raises a value error if the model cannot be read in. This can occur for several
+            reasons including the file not being found or the file not being a proper joblib file.
     """
     model = None
     try:
@@ -128,11 +134,11 @@ def load_model_object(model_input_source: str) -> sklearn.base.BaseEstimator:
     return model
 
 
-def save_csv(data: typing.Union[pd.DataFrame, pd.Series], output_path: str):
+def save_csv(data: typing.Union[pd.DataFrame, pd.Series], output_path: str) -> None:
     """This function saves a pandas dataframe as a csv file to a specified local output path.
 
     Args:
-        data (pd.DataFrame): The dataframe to save as a csv.
+        data (Union[pd.DataFrame, pd.Series]): The dataframe or series to save as a csv.
         output_path (str): The path where the file is saved to.
 
     Returns:
@@ -175,12 +181,22 @@ def save_model_object(model: sklearn.base.BaseEstimator, output_path: str) -> No
         logger.info("Saved the model object to %s", output_path)
 
 def save_dict_as_text(data: dict, output_path: str) -> None:
+    """This function saves an input dictionary as a text file, with each key-value pair in the dictionary written
+        as a new line.
+
+    Args:
+        data (dict): The input dictionary to save as a text file.
+        output_path (str): The location to which to save the text file.
+
+    Returns:
+        This function does not return any object.
+    """
     try:
-        with open(output_path, "w") as data_file:
+        with open(output_path, "w", encoding="utf-8") as data_file:
+            # for each key-value pair, write it as a new line.
             for metric, value in data.items():
                 data_file.write(metric + ": " + str(value) + "\n")
     except OSError as os_error:
         logger.error("Failed to save text file because the folder does not exist. %s", os_error)
     else:
         logger.info("Successfully saved text file to %s", output_path)
-
