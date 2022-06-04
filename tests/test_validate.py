@@ -21,5 +21,5 @@ def test_validate_dataframe_empty():
     df_input_test = pd.DataFrame()
 
     with pytest.raises(ValueError):
-        src.validate.validate_dataframe(df_input_test, duplicated_method='first')
+        src.validate.validate_dataframe(df_input_test, duplicated_method=34)
 

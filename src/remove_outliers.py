@@ -45,7 +45,7 @@ def remove_outliers(data: pd.DataFrame,
         temp_min (float): The minimum allowable temperature.
         temp_max (float): The maximum allowable temperature.
         log_rain_mm_min (float): The minimum allowable log_rain
-        log_rain_mm_max (float): The maximmum allowable log_rain
+        log_rain_mm_max (float): The maximum allowable log_rain
         clouds_min (float): The minimum allowable cloud percentage
         clouds_max (float): The maximum allowable cloud percentage
         hours_min (int): The minimum allowable hour
@@ -61,8 +61,12 @@ def remove_outliers(data: pd.DataFrame,
 
     Returns:
         data (pd.DataFrame): The dataframe with the outliers removed.
+
+    Raises:
+        KeyError: This function raises a KeyError if the column specified does not exist in the dataframe.
+        TypeError: This function raises a TypeError if one of the minimum/maximum values does not match the datatype
+            it is comparing to.
     """
-    # Note, filter data checks whether or not the column exists and if the data types match.
     data_shape = data.shape
 
     # I wrap all 8 calls to filter_data into one try block because it is un-necessary to catch exceptions from each
@@ -81,9 +85,11 @@ def remove_outliers(data: pd.DataFrame,
         if include_response:
             data = filter_data(data, column_name=response_column, min_value=response_min, max_value=response_max)
     except KeyError as key_error:
+        # This error can occur if the specified columns do not exist in the dataframe.
         logger.error("Failed to remove outliers. One of the columns specified does not exist in the dataframe.")
         raise key_error
     except TypeError as type_error:
+        # This error can occur if the datatype of the min/max values do not match the datatype of the column.
         logger.error("Failed to remove outliers. One of the input parameters is of the wrong type.")
         raise type_error
 
@@ -101,9 +107,38 @@ def remove_outliers(data: pd.DataFrame,
     return data
 
 
-def filter_data(data, column_name, min_value=0, max_value=0, valid_categories=None, categorical=False):
+def filter_data(data: pd.DataFrame,
+                column_name: str,
+                min_value: float = 0,
+                max_value: float = 0,
+                valid_categories: typing.List = None,
+                categorical: bool = False) -> pd.DataFrame:
+    """This function filters an input dataframe for values of the specified column that are in between the min and max
+        values specified or are in the list of valid categories.
+
+    Args:
+        data (pd.DataFrame): An input pandas dataframe
+        column_name (str): The name of the column to filter.
+        min_value (float): The minimum allowable value to filter for. Only required for numeric columns.
+        max_value (float):  The maximum allowable value to filter for. Only required for numeric columns.
+        valid_categories (typing.List): The list of valid categories. Only used for categorical variables.
+        categorical (bool): A boolean indicating if the column is categorical. Default is False.
+
+    Returns:
+        data (pd.DataFrame): The dataframe with the invalid rows of the column removed.
+
+    Raises:
+        KeyError: This function raises a KeyError if the column specified is not found in the dataframe.
+        TypeError: This function raises a TypeError if the minimum/maximum value specified is different from the data
+            type in the column.
+
+    """
     initial_shape = data.shape
+
+    # Filter numeric columns based on min/max values.
     if not categorical:
+        # Key Errors occur if the column does not exist in the dataframe.
+        # Type Errors occur if the data type of the column does not match the min/max values passed.
         try:
             data = data[data[column_name] >= min_value]
         except KeyError as key_error:
@@ -122,6 +157,8 @@ def filter_data(data, column_name, min_value=0, max_value=0, valid_categories=No
             logger.error("The column '%s' could not be filtered because the data type of the column did "
                          "not match the data type of the max value.", column_name)
             raise type_error
+
+    # Filter categorical column using the list of valid categories
     else:
         try:
             data = data[data[column_name].isin(valid_categories)]

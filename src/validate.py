@@ -12,19 +12,19 @@ def validate_dataframe(data: pd.DataFrame,
     This function performs data validation on an input dataframe. It checks:
     1. Whether the input data is a dataframe
     2. Whether the input data is an empty dataframe
-    3. If the columns that are passed to the function exist in the dataframe.
-    4. If the columns are of the specified datatype.
-    5. If there are any null values
-    6. If there are any duplicate rows
+    3. If there are any null values
+    4. If there are any duplicate rows
 
     Args:
         data (pd.DataFrame): The input dataframe
-        expected_columns (typing.List): The list of columns for which to check the dataframe.
         duplicated_method (str): In the event of a duplicated record, which one to keep. ('first' or 'last')
 
     Returns:
-        data_validated (bool): Returns true if the dataframe was successfully validated, false if problems were found
-        within the dataframe.
+        data_validated (bool): This function returns a boolean indicating if
+            data validation succeeded (True) or failed (False).
+
+    Raises:
+        ValueError: This function raises a ValueError if data validation fails.
     """
     data_validated = True
 
@@ -38,8 +38,14 @@ def validate_dataframe(data: pd.DataFrame,
         data_validated = False
     else:
 
-        # Count the number of duplicate and null values.
-        count_duplicate_rows = data.duplicated(keep=duplicated_method).sum()
+        # Count the number of duplicate values.
+        try:
+            count_duplicate_rows = data.duplicated(keep=duplicated_method).sum()
+        except ValueError as val_error:
+            # This error can occur if an invalid value is passed to duplicated() function.
+            raise val_error
+
+        # Count the number of null values.
         sum_null_values = data.isnull().sum()
         logger.debug("Found %d duplicate rows and %d rows with NA values.",
                      count_duplicate_rows.sum(),
@@ -51,6 +57,5 @@ def validate_dataframe(data: pd.DataFrame,
                          "is empty.")
 
     return data_validated
-
 
 
