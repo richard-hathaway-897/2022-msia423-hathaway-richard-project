@@ -1,5 +1,4 @@
 import logging
-import typing
 
 import pandas as pd
 
@@ -57,5 +56,3 @@ def validate_dataframe(data: pd.DataFrame,
                          "is empty.")
 
     return data_validated
-
-
