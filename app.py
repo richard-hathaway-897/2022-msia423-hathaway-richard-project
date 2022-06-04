@@ -101,9 +101,10 @@ def enter_query_parameters():
     new_query_params["holiday"] = request.form["holiday"]
     new_query_params["rain_1h"] = request.form["rainfall_hour"]
 
-    config_dict = src.read_write_functions.read_yaml(app.config["MODEL_CONFIG_PATH"])
-    if len(config_dict) == 0:
-        logger.error("Could not load app configuration file.")
+    try:
+        config_dict = src.read_write_functions.read_yaml(app.config["MODEL_CONFIG_PATH"])
+    except FileNotFoundError:
+        logger.error("Could not load in the YAML configuration file.")
         return render_template('error.html')
 
     try:

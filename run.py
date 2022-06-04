@@ -123,8 +123,11 @@ if __name__ == '__main__':
         src.orchestrate.fetch_data(command_line_args)
     else:
         # Every other option needs the yaml config file, so read it in here first before continuing.
-        config_dict = src.read_write_functions.read_yaml(command_line_args.config_path)
-        if len(config_dict) > 0:
+        try:
+            config_dict = src.read_write_functions.read_yaml(command_line_args.config_path)
+        except FileNotFoundError:
+            logger.error("Could not load in the YAML configuration file.")
+        else:
             if command_choice == 'clean':
                 src.orchestrate.run_clean_data(command_line_args, config_dict=config_dict)
             elif command_choice == 'generate_features':
@@ -138,5 +141,3 @@ if __name__ == '__main__':
             else:
                 parser.print_help()
 
-        else:
-            logger.error("YAML configuration file was empty. Could not execute the script.")

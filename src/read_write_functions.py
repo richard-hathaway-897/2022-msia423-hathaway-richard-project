@@ -21,13 +21,12 @@ def read_yaml(config_path: str) -> dict:
         config_dict (dict): A dictionary containing the contents of the yaml file
 
     """
-    config_dict = {}
     try:
         with open(config_path) as config_file:
             config_dict = yaml.safe_load(config_file)
     except FileNotFoundError as file_not_found:
         logger.error("Could not locate the specified configuration file. %s", file_not_found)
-        logger.warning("Returning empty dictionary.")
+        raise file_not_found
     else:
         logger.info("Successfully loaded configuration file.")
     return config_dict
@@ -45,7 +44,7 @@ def read_csv_url(data_source: str) -> pd.DataFrame():
         an empty dataframe is returned.
 
     Raises:
-        This function does not raise any exceptions.
+        ValueError: This function raises a ValueError if the reading/ingestion fails.
 
     """
     raw_data = pd.DataFrame()
@@ -67,6 +66,8 @@ def read_csv_url(data_source: str) -> pd.DataFrame():
     else:
         # If the data source is successfully read, log the message and try to upload the dataframe to S3.
         logger.info("Successfully read data from: %s", data_source)
+    if raw_data.empty:
+        raise ValueError("Failed to retrieve the data and ingest it into a pandas dataframe.")
 
     return raw_data
 
@@ -92,6 +93,9 @@ def read_csv(input_source: str) -> pd.DataFrame:
         # Log out the shape of the data.
         logger.debug("Successfully read file with %d records and %d columns from %s",
                      data_input.shape[0], data_input.shape[1], input_source)
+    if data_input.empty:
+        raise ValueError("Failed to read the data. Either the file does not exist"
+                         "or it cannot be parsed into a pandas dataframe.")
     return data_input
 
 
@@ -119,6 +123,8 @@ def load_model_object(model_input_source: str) -> sklearn.base.BaseEstimator:
         logger.error("Unexpected behavior occurred reading the file. Check that the input file is a .joblib file.")
     else:
         logger.debug("Successfully read model object from %s", model_input_source)
+    if model is None:
+        raise ValueError("Failed to read in the model object.")
     return model
 
 

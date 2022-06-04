@@ -36,23 +36,22 @@ def run_app_prediction(new_query_params: dict, model_object_path: str, one_hot_e
                                                                     one_hot_encoder=one_hot_encoder,
                                                                     remove_outlier_params=config_dict["remove_outliers"],
                                                                     **config_dict["generate_features"]["pipeline_and_app"])
-    except (ValueError, KeyError) as preprocess_error:
+    except (TypeError, KeyError) as preprocess_error:
         logger.error("Failed to complete data preprocessing steps of user input.")
         raise preprocess_error
 
-    prediction = src.predict.make_predictions(prediction_df,
-                                              model=model,
-                                              is_test_data = False,
-                                              **config_dict["predict"])
-    if prediction.empty:
-        logger.error("No prediction was made.")
-        raise ValueError("The prediction could not be made.")
-    else:
-        try:
-            traffic_volume = src.predict.classify_traffic(prediction[0])
-        except ValueError as val_error:
-            logger.error("The input prediction was negative.")
-            raise val_error
+    try:
+        prediction = src.predict.make_predictions(prediction_df, model=model, is_test_data = False,
+                                                  **config_dict["predict"])
+    except (KeyError, ValueError) as prediction_error:
+        logger.error("Failed to make prediction.")
+        raise prediction_error
+
+    try:
+        traffic_volume = src.predict.classify_traffic(prediction[0])
+    except ValueError as val_error:
+        logger.error("The input prediction was negative.")
+        raise val_error
 
     logger.info("Prediction: %f", prediction[0])
 

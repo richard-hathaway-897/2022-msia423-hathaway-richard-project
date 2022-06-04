@@ -64,15 +64,28 @@ def remove_outliers(data: pd.DataFrame,
     """
     # Note, filter data checks whether or not the column exists and if the data types match.
     data_shape = data.shape
-    data = filter_data(data, column_name=temperature_column, min_value=temp_min, max_value=temp_max)
-    data = filter_data(data, column_name=rain_column, min_value=log_rain_mm_min, max_value=log_rain_mm_max)
-    data = filter_data(data, column_name=clouds_column, min_value=clouds_min, max_value=clouds_max)
-    data = filter_data(data, column_name=hour_column, min_value=hours_min, max_value=hours_max)
-    data = filter_data(data, column_name=month_column, min_value=month_min, max_value=month_max)
-    data = filter_data(data, column_name=weather_column, valid_categories=valid_weather, categorical=True)
-    data = filter_data(data, column_name=day_of_week_column, valid_categories=valid_week_days, categorical=True)
-    if include_response:
-        data = filter_data(data, column_name=response_column, min_value=response_min, max_value=response_max)
+
+    # I wrap all 8 calls to filter_data into one try block because it is un-necessary to catch exceptions from each
+    # separate call individually. The exception handling and logging in filter_data alerts users to the specific error
+    # that occurs, and this try block just catches and re-raises the individual errors from filter_data.
+    # So if I am handling exceptions from filter_data in the same way for all calls to filter data,
+    # I can just catch and handle it once rather than with 8 separate try-except blocks.
+    try:
+        data = filter_data(data, column_name=temperature_column, min_value=temp_min, max_value=temp_max)
+        data = filter_data(data, column_name=rain_column, min_value=log_rain_mm_min, max_value=log_rain_mm_max)
+        data = filter_data(data, column_name=clouds_column, min_value=clouds_min, max_value=clouds_max)
+        data = filter_data(data, column_name=hour_column, min_value=hours_min, max_value=hours_max)
+        data = filter_data(data, column_name=month_column, min_value=month_min, max_value=month_max)
+        data = filter_data(data, column_name=weather_column, valid_categories=valid_weather, categorical=True)
+        data = filter_data(data, column_name=day_of_week_column, valid_categories=valid_week_days, categorical=True)
+        if include_response:
+            data = filter_data(data, column_name=response_column, min_value=response_min, max_value=response_max)
+    except KeyError as key_error:
+        logger.error("Failed to remove outliers. One of the columns specified does not exist in the dataframe.")
+        raise key_error
+    except TypeError as type_error:
+        logger.error("Failed to remove outliers. One of the input parameters is of the wrong type.")
+        raise type_error
 
     data_outlier_shape = data.shape
 
@@ -88,37 +101,36 @@ def remove_outliers(data: pd.DataFrame,
     return data
 
 
-def filter_data(data, column_name, min_value=0, max_value=0, valid_categories=[], categorical = False):
+def filter_data(data, column_name, min_value=0, max_value=0, valid_categories=None, categorical=False):
     initial_shape = data.shape
-    error = False
     if not categorical:
         try:
             data = data[data[column_name] >= min_value]
-        except KeyError:
+        except KeyError as key_error:
             logger.error("The column '%s' does not exist in the dataframe.", column_name)
-            error = True
-        except TypeError:
-            logger.error("The column '%s' could not be filtered because the data type of the column did not match the data"
-                         " type of the min value.", column_name)
-            error = True
+            raise key_error
+        except TypeError as type_error:
+            logger.error("The column '%s' could not be filtered because the data type of the column did "
+                         "not match the data type of the min value.", column_name)
+            raise type_error
         try:
             data = data[data[column_name] <= max_value]
-        except KeyError:
+        except KeyError as key_error:
             logger.error("The column '%s' does not exist in the dataframe.", column_name)
-            error = True
-        except TypeError:
-            logger.error("The column '%s' could not be filtered because the data type of the column did not match the data"
-                         " type of the max value.", column_name)
-            error = True
+            raise key_error
+        except TypeError as type_error:
+            logger.error("The column '%s' could not be filtered because the data type of the column did "
+                         "not match the data type of the max value.", column_name)
+            raise type_error
     else:
         try:
             data = data[data[column_name].isin(valid_categories)]
-        except KeyError:
+        except KeyError as key_error:
             logger.error("The column '%s' does not exist in the dataframe.", column_name)
-            error = True
-    if error:
-        data = pd.DataFrame()
-    final_shape = data.shape
-    logger.debug("Removed %d records that matched the outlier criteria for '%s'.", initial_shape[0] - final_shape[0], column_name)
+            raise key_error
+
+    logger.debug("Removed %d records that matched the outlier criteria for '%s'.",
+                 initial_shape[0] - data.shape[0],
+                 column_name)
 
     return data

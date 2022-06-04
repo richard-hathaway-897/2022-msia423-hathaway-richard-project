@@ -31,9 +31,11 @@ def fetch_data(command_line_args: argparse.Namespace) -> None:
     Raises:
         This function does not raise any errors.
     """
-
-    raw_data = src.read_write_functions.read_csv_url(data_source=command_line_args.data_url)
-    if not raw_data.empty:
+    try:
+        raw_data = src.read_write_functions.read_csv_url(data_source=command_line_args.data_url)
+    except ValueError as val_error:
+        logger.error(val_error)
+    else:
         src.read_write_s3.s3_write(raw_data, command_line_args.path_s3)
 
 
@@ -76,28 +78,37 @@ def run_generate_features(command_line_args: argparse.Namespace, config_dict: di
         This function does not return any object.
     """
     # Read the input cleaned data
-    input_data = src.read_write_functions.read_csv(command_line_args.input_source)
-    valid_data = src.validate.validate_dataframe(input_data, **config_dict["validate_dataframe"])
-
-    if valid_data:
-        train_data, test_data, one_hot_encoder = \
-            src.data_preprocessing.generate_features(data=input_data,
-                                                     remove_outlier_params=config_dict["remove_outliers"],
-                                                     **config_dict["generate_features"]["pipeline_and_app"],
-                                                     **config_dict["generate_features"]["pipeline_only"])
-
-        # Save the train and test data, and print out messages if successful.
-        if not train_data.empty:
-            src.read_write_functions.save_csv(train_data, command_line_args.train_output_source)
-        else:
-            logger.warning("Did not save training data. Creation of training data failed.")
-        if not test_data.empty:
-            src.read_write_functions.save_csv(test_data, command_line_args.test_output_source)
-        else:
-            logger.warning("Did not save test data. Creation of test data failed.")
-        src.read_write_functions.save_model_object(one_hot_encoder, command_line_args.one_hot_path)
+    try:
+        input_data = src.read_write_functions.read_csv(command_line_args.input_source)
+    except ValueError:
+        logger.error("Failed to read in the cleaned data csv file. Please check the logs for further information.")
     else:
-        logger.warning("Did not generate features. Data validation failed.")
+
+        valid_data = src.validate.validate_dataframe(input_data, **config_dict["validate_dataframe"])
+
+        if valid_data:
+            try:
+                train_data, test_data, one_hot_encoder = \
+                    src.data_preprocessing.generate_features(data=input_data,
+                                                             remove_outlier_params=config_dict["remove_outliers"],
+                                                             **config_dict["generate_features"]["pipeline_and_app"],
+                                                             **config_dict["generate_features"]["pipeline_only"])
+            except (KeyError, ValueError, TypeError):
+                logger.error("Generate Features step failed.")
+            else:
+
+                # Save the train and test data, and print out messages if successful.
+                if not train_data.empty:
+                    src.read_write_functions.save_csv(train_data, command_line_args.train_output_source)
+                else:
+                    logger.warning("Did not save training data. Creation of training data failed.")
+                if not test_data.empty:
+                    src.read_write_functions.save_csv(test_data, command_line_args.test_output_source)
+                else:
+                    logger.warning("Did not save test data. Creation of test data failed.")
+                src.read_write_functions.save_model_object(one_hot_encoder, command_line_args.one_hot_path)
+        else:
+            logger.warning("Did not generate features. Data validation failed.")
 
 def run_train_model(command_line_args: argparse.Namespace, config_dict: dict) -> None:
     """This function calls the necessary functions to load train data, fit the model object, and save the model_object.
@@ -110,20 +121,24 @@ def run_train_model(command_line_args: argparse.Namespace, config_dict: dict) ->
         This function does not return any object.
     """
     # Read in the training data
-    training_data = src.read_write_functions.read_csv(command_line_args.train_input_source)
-    valid_data = src.validate.validate_dataframe(
-        training_data,
-        **config_dict["validate_dataframe"])
-    if valid_data:
-        try:
-            trained_model = src.train_model.train_model(train_data=training_data,
-                                                        **config_dict["model_training"]["random_forest"])
-        except KeyError:
-            logger.error("The response column was not found in the training data.")
-        else:
-            src.read_write_functions.save_model_object(trained_model, command_line_args.model_output_source)
+    try:
+        training_data = src.read_write_functions.read_csv(command_line_args.train_input_source)
+    except ValueError:
+        logger.error("Failed to read in the training data csv file. Please check the logs for further information.")
     else:
-        logger.warning("Model training did not occur. Data validation failed.")
+        valid_data = src.validate.validate_dataframe(
+            training_data,
+            **config_dict["validate_dataframe"])
+        if valid_data:
+            try:
+                trained_model = src.train_model.train_model(train_data=training_data,
+                                                            **config_dict["model_training"]["random_forest"])
+            except KeyError:
+                logger.error("The response column was not found in the training data.")
+            else:
+                src.read_write_functions.save_model_object(trained_model, command_line_args.model_output_source)
+        else:
+            logger.warning("Model training did not occur. Data validation failed.")
 
 def run_predict(command_line_args: argparse.Namespace, config_dict: dict) -> None:
     """This function calls the necessary functions to load the test data and trained model object,
@@ -137,18 +152,36 @@ def run_predict(command_line_args: argparse.Namespace, config_dict: dict) -> Non
         This function does not return any object.
     """
     # Read in the test data
-    test_data = src.read_write_functions.read_csv(command_line_args.test_input_source)
-    model = src.read_write_functions.load_model_object(command_line_args.model_input_source)
-    valid_data = src.validate.validate_dataframe(
-        test_data,
-        **config_dict["validate_dataframe"])
-    if valid_data and model is not None:
-        predictions = src.predict.make_predictions(new_data=test_data, model=model, is_test_data=True, **config_dict["predict"])
-        if not predictions.empty:
-            src.read_write_functions.save_csv(predictions,
-                                              command_line_args.predictions_output_source)
-    else:
-        logger.warning("Model scoring did not occur. Data validation failed.")
+    data_read_error = False
+    try:
+        test_data = src.read_write_functions.read_csv(command_line_args.test_input_source)
+    except ValueError:
+        logger.error("Failed to read in the test data csv file. Please check the logs for further information.")
+        data_read_error = True
+    try:
+        model = src.read_write_functions.load_model_object(command_line_args.model_input_source)
+    except ValueError:
+        logger.error("Failed to read in the model object. Please check the logs for further information.")
+        data_read_error = True
+    if not data_read_error:
+        valid_data = src.validate.validate_dataframe(
+            test_data,
+            **config_dict["validate_dataframe"])
+        if valid_data:
+            try:
+                predictions = src.predict.make_predictions(new_data=test_data,
+                                                           model=model,
+                                                           is_test_data=True,
+                                                           **config_dict["predict"])
+            except KeyError:
+                logger.error("Failed to generate features. A column was missing from the dataframe.")
+            except ValueError:
+                logger.error("Failed to make predictions. The model object is not fitted or has invalid parameters.")
+            else:
+                src.read_write_functions.save_csv(predictions,
+                                                  command_line_args.predictions_output_source)
+        else:
+            logger.warning("Did not create predictions. Data validation failed.")
 #
 def run_evaluate(command_line_args: argparse.Namespace, config_dict: dict) -> None:
     """This function calls the necessary functions to load the test data and model predictions,
@@ -163,15 +196,28 @@ def run_evaluate(command_line_args: argparse.Namespace, config_dict: dict) -> No
     """
 
     # Read in the test data
-    test_data = src.read_write_functions.read_csv(command_line_args.test_input_source)
+    try:
+        test_data = src.read_write_functions.read_csv(command_line_args.test_input_source)
+    except ValueError:
+        logger.error("Failed to read in the test data csv file. Please check the logs for further information.")
+    try:
+        predictions = src.read_write_functions.read_csv(command_line_args.predictions_input_source)
+    except ValueError:
+        logger.error("Failed to read in the predictions csv file. Please check the logs for further information.")
     valid_data = src.validate.validate_dataframe(
         test_data,
         **config_dict["validate_dataframe"])
-    predictions = src.read_write_functions.read_csv(command_line_args.predictions_input_source)
+
     if valid_data and not predictions.empty:
-        metrics_dict = src.evaluate_model.evaluate_model(test=test_data,
-                                                         predictions=predictions,
-                                                         **config_dict["predict"])
-        src.read_write_functions.save_dict_as_text(data=metrics_dict,
-                                                   output_path=command_line_args.performance_metrics_output_source)
+        try:
+            metrics_dict = src.evaluate_model.evaluate_model(test=test_data,
+                                                             predictions=predictions,
+                                                             **config_dict["predict"])
+        except KeyError:
+            logger.error("Failed to evaluate the model. A required column was missing from the data.")
+        except ValueError:
+            logger.error("Failed to evaluate the model. An error occurred computing the final model metrics.")
+        else:
+            src.read_write_functions.save_dict_as_text(data=metrics_dict,
+                                                       output_path=command_line_args.performance_metrics_output_source)
     logger.warning("Model evaluation did not occur. Data validation failed.")

@@ -1,7 +1,7 @@
 import logging
 import typing
-import dateutil
 import datetime
+import dateutil
 
 import numpy as np
 import pandas as pd
@@ -46,26 +46,50 @@ def generate_features(data: pd.DataFrame,
             data, and the last one is the one_hot_encoder sklearn object.
     """
 
-    data_original_shape = data.shape
     logger.info("Data prior to generating features has %d records and %d columns.",
-                data_original_shape[0], data_original_shape[1])
-    data = create_datetime_features(data, **create_datetime_features_params)
-    data = binarize_column(data, **binarize_column_params)
-    data = log_transform(data, **log_transform_params)
+                data.shape[0], data.shape[1])
+    try:
+        data = create_datetime_features(data, **create_datetime_features_params)
+    except KeyError as create_datetime_error:
+        logger.error("Failed to create datetime features.")
+        raise create_datetime_error
+    try:
+        data = binarize_column(data, **binarize_column_params)
+    except KeyError as binarize_error:
+        logger.error("Failed to binarize columns.")
+        raise binarize_error
+    try:
+        data = log_transform(data, **log_transform_params)
+    except (KeyError, TypeError) as log_transform_error:
+        logger.error("Failed to log transform columns.")
+        raise log_transform_error
 
-    cols_drop = drop_columns + \
-                list(log_transform_params["log_transform_column_names"]) + \
-                list(binarize_column_params["binarize_column_names"])
-    data = columns_drop(data, columns=cols_drop)
-    data = src.remove_outliers.remove_outliers(data,
-                                               **remove_outlier_params["feature_columns"],
-                                               **remove_outlier_params["valid_values"])
+    data = columns_drop(data, columns=drop_columns + \
+                                        list(log_transform_params["log_transform_column_names"]) + \
+                                        list(binarize_column_params["binarize_column_names"]))
+    try:
+        data = src.remove_outliers.remove_outliers(data,
+                                                   **remove_outlier_params["feature_columns"],
+                                                   **remove_outlier_params["valid_values"])
+    except (KeyError, TypeError) as remove_outlier_error:
+        logger.error("Failed to remove outliers.")
+        raise remove_outlier_error
     data = data.reset_index(drop=True)
-    data, one_hot_encoder = one_hot_encoding(data, **one_hot_encoding_params)
-    train, test = create_train_test_split(data, **train_test_split_params)
-    logger.info("Finished generating features.")
-    logger.info("Train contains %d records and %d columns", train.shape[0], train.shape[1])
-    logger.info("Test contains %d records and %d columns", test.shape[0], test.shape[1])
+    try:
+        data, one_hot_encoder = one_hot_encoding(data, **one_hot_encoding_params)
+    except KeyError as one_hot_encode_error:
+        logger.error("Failed to one hot encode the data.")
+        raise one_hot_encode_error
+    try:
+        train, test = create_train_test_split(data, **train_test_split_params)
+    except (TypeError, ValueError) as create_train_test_split_error:
+        logger.error("Failed to split the data into train and test.")
+        raise create_train_test_split_error
+
+    logger.info("Finished generating features."
+                "Train contains %d records and %d columns. "
+                "Test contains %d records and %d columns",
+                train.shape[0], train.shape[1], test.shape[0], test.shape[1])
 
     return train, test, one_hot_encoder
 
@@ -112,10 +136,13 @@ def log_transform(data: pd.DataFrame,
     for column_log in log_transform_column_names:
         try:
             data[log_transform_new_column_prefix + column_log] = np.log1p(data[column_log])
-        except TypeError:
+        except TypeError as type_error:
             logger.error("Could not log transform the column. Data type cannot be log transformed.")
-        except KeyError:
-            logger.error("Could not log transform the column. The specified column %s is not in the dataframe.", column_log)
+            raise type_error
+        except KeyError as key_error:
+            logger.error("Could not log transform the column. The specified column %s is not in the dataframe.",
+                         column_log)
+            raise key_error
         else:
             logger.info("Log transformed column %s. Added column '%s' to the dataset.",
                         column_log, log_transform_new_column_prefix + column_log)
@@ -127,12 +154,24 @@ def binarize_column(data: pd.DataFrame,
                     binarize_column_names: typing.List,
                     binarize_new_column_prefix: str,
                     binarize_zero_value: str) -> pd.DataFrame:
+    """
+
+    Args:
+        data:
+        binarize_column_names:
+        binarize_new_column_prefix:
+        binarize_zero_value:
+
+    Returns:
+
+    """
     for column_binarize in binarize_column_names:
         try:
             data[binarize_new_column_prefix + column_binarize] = data[column_binarize] \
                 .apply(func=binarize, args=[binarize_zero_value])
-        except KeyError:
+        except KeyError as key_error:
             logger.error("Could not binarize the column. The specified column does not exist in the dataframe.")
+            raise key_error
         else:
             logger.info("Binarized column %s. Added column '%s' to the dataset.",
                         column_binarize, binarize_new_column_prefix + column_binarize)
@@ -180,10 +219,11 @@ def create_datetime_features(data: pd.DataFrame,
     try:
         data[original_datetime_column] = data[original_datetime_column] \
                 .apply(func=validate_date_time)
-    except KeyError:
+    except KeyError as key_error:
         logger.error("Could not generate datetime features. "
                      "The specified date time column %s does not exist in the dataframe.",
                      original_datetime_column)
+        raise key_error
     else:
         # Drop any rows with invalid dates.
         data.dropna(axis=0, subset=[original_datetime_column], inplace=True)
@@ -216,7 +256,7 @@ def validate_date_time(date_time_string: str) -> typing.Union[datetime.datetime,
     date_time = None
     try:
         date_time = pd.to_datetime(date_time_string)
-    except dateutil.parser._parser.ParserError as invalid_date:
+    except dateutil.parser.ParserError as invalid_date:
         logger.error("Invalid date found, removing record. %s", invalid_date)
         return date_time
     else:
@@ -242,14 +282,14 @@ def fahrenheit_to_kelvin(temp_deg_f: float) -> float:
         kelvin = (temp_deg_f - 32) * (5/9) + 273.15
     except TypeError as type_error:
         logger.error("The value passed could not be converted to Kelvin. %s", type_error)
-        raise TypeError
+        raise type_error
     return kelvin
 
 
 def one_hot_encoding(data: pd.DataFrame,
                      one_hot_encode_columns: typing.List,
                      sparse: bool = True,
-                     drop: str = 'first'
+                     drop: str = "first"
                      ) -> typing.Tuple[pd.DataFrame, sklearn.preprocessing.OneHotEncoder]:
     """This function creates a one-hot-encoder object and uses it to one-hot-encode an input dataframe.
         For more details see https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.OneHotEncoder.html
@@ -273,12 +313,12 @@ def one_hot_encoding(data: pd.DataFrame,
     """
 
     logger.info("Prior to One Hot Encoding, data has %d columns.", data.shape[1])
-    data_one_hot_encoded = pd.DataFrame()
     one_hot_encoder = sklearn.preprocessing.OneHotEncoder(drop=drop, sparse=sparse)
     try:
         one_hot_array = one_hot_encoder.fit_transform(data[one_hot_encode_columns])
     except KeyError as key_error:
-        logger.error("At least one column did not exist in the dataframe. %s", key_error)
+        logger.error("One hot encoding failed. At least one column did not exist in the dataframe. %s", key_error)
+        raise key_error
     else:
         one_hot_column_names = one_hot_encoder.get_feature_names_out()
         one_hot_df = pd.DataFrame(one_hot_array, columns=one_hot_column_names)
@@ -287,11 +327,6 @@ def one_hot_encoding(data: pd.DataFrame,
         logger.info("One Hot Encoded the following columns: %s", str(one_hot_encode_columns))
         logger.info("After One Hot Encoding, data has %d columns.", data_one_hot_encoded.shape[1])
         logger.info("Number of NA values: %d", data_one_hot_encoded.isna().sum().sum())
-
-    if data_one_hot_encoded.empty:
-        logger.warning("One Hot Encoding Failed. Returning empty dataframe.")
-
-
 
     return data_one_hot_encoded, one_hot_encoder
 
@@ -322,12 +357,11 @@ def create_train_test_split(
     except TypeError as type_error:
         # This error can occur if the input is not a dataframe
         logger.error("Invalid input type. Check that the input is a dataframe. %s", type_error)
-        logger.warning("Returning two empty dataframes.")
-        train, test = (pd.DataFrame(), pd.DataFrame())
+        raise type_error
     except ValueError as val_error:
         # This error can occur if invalid parameters are passed to train_test_split (for example, a test size of 1.2)
         logger.error("Invalid parameters passed to the train_test_split function. %s", val_error)
-        train, test = (pd.DataFrame(), pd.DataFrame())
+        raise val_error
     else:
         logger.info(
             "Created train/test split of the data using test size of %f, shuffle set to '%r', "

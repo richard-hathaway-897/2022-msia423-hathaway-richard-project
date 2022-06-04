@@ -26,9 +26,9 @@ def predict_preprocess(predictors: dict,
                                                   log_transform_params=log_transform_params,
                                                   binarize_column_params=binarize_column_params,
                                                   remove_outlier_params=remove_outlier_params)
-    except ValueError as val_error:
-        logger.error("Failed to complete data preprocessing transformations of user input.")
-        raise val_error
+    except (TypeError, KeyError) as input_transformations_error:
+        logger.error("Failed to complete input transformations for the user input.")
+        raise input_transformations_error
 
     try:
         data_one_hot_encoded = app_input_one_hot_encode(prediction_df=prediction_df,
@@ -46,20 +46,34 @@ def app_input_transformations(prediction_df,
                               log_transform_params,
                               remove_outlier_params):
 
-    prediction_df = src.data_preprocessing.binarize_column(prediction_df, **binarize_column_params)
-    prediction_df = src.data_preprocessing.log_transform(prediction_df, **log_transform_params)
-    prediction_df["temp"] = src.data_preprocessing.fahrenheit_to_kelvin(
-        prediction_df["temp"])  # TODO: Is temp hardcoded?
+    try:
+        prediction_df = src.data_preprocessing.binarize_column(prediction_df, **binarize_column_params)
+    except KeyError as binarize_error:
+        logger.error("Failed to binarize columns.")
+        raise binarize_error
+    try:
+        prediction_df = src.data_preprocessing.log_transform(prediction_df, **log_transform_params)
+    except (TypeError, KeyError) as log_transform_error:
+        logger.error("Failed to log transform the specified columns.")
+    try:
+        prediction_df["temp"] = src.data_preprocessing.fahrenheit_to_kelvin(
+            prediction_df["temp"])  # TODO: Is temp hardcoded?
+    except TypeError as temp_conversion_error:
+        logger.error("Failed to convert from fahrenheit to kelvin.")
+        raise temp_conversion_error
 
     cols_drop = list(log_transform_params["log_transform_column_names"]) + \
                 list(binarize_column_params["binarize_column_names"])
     prediction_df = src.data_preprocessing.columns_drop(prediction_df, columns=cols_drop)
-    prediction_df = src.remove_outliers.remove_outliers(prediction_df,
-                                                        **remove_outlier_params["feature_columns"],
-                                                        **remove_outlier_params["valid_values"],
-                                                        include_response=False)
-    if prediction_df.empty:
-        raise ValueError("Failed to completed data preprocessing steps.")
+
+    try:
+        prediction_df = src.remove_outliers.remove_outliers(prediction_df,
+                                                            **remove_outlier_params["feature_columns"],
+                                                            **remove_outlier_params["valid_values"],
+                                                            include_response=False)
+    except (KeyError, TypeError) as remove_outlier_error:
+        logger.error("Failed to remove outliers.")
+        raise remove_outlier_error
     prediction_df = prediction_df.reset_index(drop=True)
     return prediction_df
 

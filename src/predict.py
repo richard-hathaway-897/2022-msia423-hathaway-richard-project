@@ -11,14 +11,13 @@ logger = logging.getLogger(__name__)
 
 def make_predictions(new_data: pd.DataFrame, model: sklearn.base.BaseEstimator, response_column: str, is_test_data: bool) -> pd.Series:
 
-    predictions_series = pd.Series(dtype='float64')
     predictions = None
     if is_test_data:
         try:
             predictors = new_data.drop([response_column], axis=1)
         except KeyError as key_error:
             logger.error("The response column was not present in the dataframe. Returning an empty series. %s", key_error)
-            return predictions_series
+            raise key_error
     else:
         predictors = new_data
 
@@ -33,7 +32,7 @@ def make_predictions(new_data: pd.DataFrame, model: sklearn.base.BaseEstimator, 
     except KeyError as key_error:
         # This error can occur if the predictor columns are not in the test set.
         logger.error("Prediction failed. The required columns were not present in the dataset. %s", key_error)
-        successful_prediction = False
+        raise key_error
     except ValueError as val_error:
         # This error can occur if the model object has invalid hyperparameters.
         logger.error("Prediction failed. The model object contained invalid hyperparameters. %s", val_error)
@@ -47,12 +46,12 @@ def make_predictions(new_data: pd.DataFrame, model: sklearn.base.BaseEstimator, 
     # If the prediction is successful, convert the results to pandas Series and return them
     if successful_prediction:
         predictions_series = pd.Series(predictions)
-
         logger.info("Successfully predicted estimates.")
 
     # If prediction fails, print a warning.
     else:
         logger.warning("Prediction failed. No output files saved. Returning empty an dataframe.")
+        raise ValueError("Failed to generate predictions due to an invalid model object.")
 
     return predictions_series
 
