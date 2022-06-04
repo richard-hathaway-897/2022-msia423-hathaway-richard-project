@@ -113,14 +113,19 @@ docker build -f dockerfiles/Dockerfile -t final-project .
 
 #### Write Raw Data to S3
 ```bash
-docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY  --mount type=bind,source="$(pwd)"/data,target=/app/data/ trafficpredictiondb fetch -- path_s3=s3://2022-msia423-hathaway-richard/raw_data/metro_interstate_traffic_volume.csv --data_url=https://archive.ics.uci.edu/ml/machine-learning-databases/00492/Metro_Interstate_Traffic_Volume.csv.gz
+docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY  --mount type=bind,source="$(pwd)"/data,target=/app/data/ final-project fetch -- path_s3=s3://2022-msia423-hathaway-richard/raw_data/metro_interstate_traffic_volume.csv --data_url=https://archive.ics.uci.edu/ml/machine-learning-databases/00492/Metro_Interstate_Traffic_Volume.csv.gz
+```
+
+#### Read Data from S3 and Clean Data
+```bash
+docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY  --mount type=bind,source="$(pwd)"/data,target=/app/data/ final-project clean --config_path=./config/model_config.yaml --input_source=s3://2022-msia423-hathaway-richard/raw_data/metro_interstate_traffic_volume.csv --output_path=./data/clean_data/cleaned_data.csv 
 ```
 
 #### Create the database 
 To create the database in the location configured in `config.py` run: 
 
 ```bash
-docker run -e SQLALCHEMY_DATABASE_URI --mount type=bind,source="$(pwd)"/data,target=/app/data/ trafficpredictiondb create_db  --engine_string=${SQLALCHEMY_DATABASE_URI}
+docker run -e SQLALCHEMY_DATABASE_URI --mount type=bind,source="$(pwd)"/data,target=/app/data/ final-project create_db  --engine_string=${SQLALCHEMY_DATABASE_URI}
 ```
 The `--mount` argument allows the app to access your local `data/` folder and save the SQLite database there so it is available after the Docker container finishes.
 
