@@ -13,17 +13,17 @@ logger = logging.getLogger(__name__)
 
 def run_app_prediction(new_query_params: dict, model_object_path: str, one_hot_encoder_path: str, config_dict: dict):
 
-    logger.info("Making predictions")
-    one_hot_encoder = src.read_write_functions.load_model_object(one_hot_encoder_path)
+    try:
+        one_hot_encoder = src.read_write_functions.load_model_object(one_hot_encoder_path)
+    except ValueError as val_error:
+        logger.error("Failed to load in the one-hot-encoder object.")
+        raise val_error
 
-    if one_hot_encoder is None:
-        logger.error("Could not load the one hot encoder.")
-        raise FileNotFoundError
-    model = src.read_write_functions.load_model_object(model_object_path)
-
-    if model is None:
-        logger.error("Could not load the trained model object.")
-        raise FileNotFoundError
+    try:
+        model = src.read_write_functions.load_model_object(model_object_path)
+    except ValueError as val_error:
+        logger.error("Failed to load in the trained model object.")
+        raise val_error
 
     try:
         predictors = src.preprocess_app_input.validate_app_input(new_query_params, config_dict["process_user_input"]["validate_user_input"])

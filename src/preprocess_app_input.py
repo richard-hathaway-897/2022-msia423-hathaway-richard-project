@@ -55,6 +55,7 @@ def app_input_transformations(prediction_df,
         prediction_df = src.data_preprocessing.log_transform(prediction_df, **log_transform_params)
     except (TypeError, KeyError) as log_transform_error:
         logger.error("Failed to log transform the specified columns.")
+        raise log_transform_error
     try:
         prediction_df["temp"] = src.data_preprocessing.fahrenheit_to_kelvin(
             prediction_df["temp"])  # TODO: Is temp hardcoded?

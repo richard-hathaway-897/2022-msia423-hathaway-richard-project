@@ -46,6 +46,10 @@ def validate_dataframe(data: pd.DataFrame,
                      sum_null_values.sum())
         logger.info("Completed data validation step.")
 
+    if not data_validated:
+        raise ValueError("Data validation failed. Either the input data is not a pandas dataframe or the dataframe"
+                         "is empty.")
+
     return data_validated
 
 
