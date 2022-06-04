@@ -90,7 +90,7 @@ def run_app_prediction(new_query_params: dict,
         traffic_volume = src.predict.classify_traffic(prediction[0])
     except ValueError as val_error:
         # This error can occur if the input prediction is negative. A logger message is printed inside the
-        # classify traffic function.
+        # classify_traffic function.
         raise val_error
 
     return prediction, traffic_volume
@@ -117,7 +117,7 @@ def run_update_historical_queries(query_manager:QueryManager,
     Raises:
         sqlite3.OperationalError: This exception will be raised if the app tries to access a local sqlite database
             and fails.
-        sqlalchemy.exc.OperationalError: This exception will be raised if the app tries to access a the AWS RDS instance
+        sqlalchemy.exc.OperationalError: This exception will be raised if the app tries to acces the AWS RDS instance
             and fails.
     """
     # Throughout this function, sqlite3.OperationalError and sqlalchemy.exc.OperationalError are caught in one except
