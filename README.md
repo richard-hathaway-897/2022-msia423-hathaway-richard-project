@@ -108,8 +108,14 @@ Additionally, when the web application is deployed to the public, data on user s
 To build the image, run from this directory (the root of the repo): 
 
 ```bash
- docker build -f dockerfiles/Dockerfile.run -t trafficpredictiondb .
+docker build -f dockerfiles/Dockerfile -t final-project .
 ```
+
+#### Write Raw Data to S3
+```bash
+docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY  --mount type=bind,source="$(pwd)"/data,target=/app/data/ trafficpredictiondb fetch -- path_s3=s3://2022-msia423-hathaway-richard/raw_data/metro_interstate_traffic_volume.csv --data_url=https://archive.ics.uci.edu/ml/machine-learning-databases/00492/Metro_Interstate_Traffic_Volume.csv.gz
+```
+
 #### Create the database 
 To create the database in the location configured in `config.py` run: 
 
