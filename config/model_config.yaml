@@ -111,3 +111,5 @@ process_user_input:
       - "clouds_all"
       - "month"
       - "hour"
+  app_input_transformations:
+    temperature_column: "temp"

@@ -62,11 +62,12 @@ def run_app_prediction(new_query_params: dict,
     # Try to run prediction pre-processing steps such as data transformations and one-hot-encoding on the input
     # user data.
     try:
-        prediction_df = \
-            src.preprocess_app_input.predict_preprocess(predictors=predictors,
-                                                        one_hot_encoder=one_hot_encoder,
-                                                        remove_outlier_params=config_dict["remove_outliers"],
-                                                        **config_dict["generate_features"]["pipeline_and_app"])
+        prediction_df = src.preprocess_app_input.\
+            predict_preprocess(predictors=predictors,
+                               one_hot_encoder=one_hot_encoder,
+                               remove_outlier_params=config_dict["remove_outliers"],
+                               **config_dict["preprocess_user_input"]["app_input_transformations"],
+                               **config_dict["generate_features"]["pipeline_and_app"])
     # Catch both TypeError and KeyError in one except block. More detailed exception handling occurs in the module,
     # where there are custom logging messages for each individual exception. Here, because I want to handle these
     # errors in the same way, it is more succinct to catch them in one except block.
