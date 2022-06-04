@@ -76,17 +76,11 @@ def test_log_transform_invalid_column():
         ]
     df_input_test = pd.DataFrame(data=input_test, columns=["column1", "column2"])
 
-    expected_output = [
-        [1.0, 2.0],
-        [1.0, 2.0],
-        [1.0, 2.0]
-    ]
+    with pytest.raises(KeyError):
+        src.data_preprocessing.log_transform(data=df_input_test,
+                                             log_transform_column_names=["column3"],
+                                             log_transform_new_column_prefix="log_")
 
-    df_expected_output = pd.DataFrame(data=expected_output, columns=["column1", "column2"])
-    df_test_output = src.data_preprocessing.log_transform(data=df_input_test,
-                                                          log_transform_column_names=["column3"],
-                                                          log_transform_new_column_prefix="log_")
-    pd.testing.assert_frame_equal(df_expected_output, df_test_output)
 
 
 def test_binarize_column():
@@ -121,19 +115,13 @@ def test_binarize_column_invalid_column():
     ]
     df_input_test = pd.DataFrame(data=input_test, columns=["column1", "column2"])
 
-    expected_output = [
-        [1.0, "None"],
-        [1.0, "Other Value A"],
-        [1.0, "Other Value B"]
-    ]
-
-    df_expected_output = pd.DataFrame(data=expected_output, columns=["column1", "column2"])
-    df_test_output = src.data_preprocessing.binarize_column(data=df_input_test,
+    with pytest.raises(KeyError):
+        src.data_preprocessing.binarize_column(data=df_input_test,
                                                             binarize_column_names=["column3"],
                                                             binarize_new_column_prefix="binarize_",
                                                             binarize_zero_value="None")
 
-    pd.testing.assert_frame_equal(df_expected_output, df_test_output)
+
 
 def test_binarize():
     input_test = "None"
@@ -167,23 +155,20 @@ def test_create_datetime_features():
                                                                   day_of_week_column="day_of_week")
     pd.testing.assert_frame_equal(df_expected_output, df_test_output)
 
-def test_create_datetime_features_invalid_date():
+def test_create_datetime_features_invalid_column():
     input_test = [
         [1.0, "2022-06-01 23:13:45"],
         [1.0, "2022-05-32 08:00:00"]
     ]
-    df_input_test = pd.DataFrame(data=input_test, columns=["column1", "date_time"])
+    df_input_test = pd.DataFrame(data=input_test, columns=["column1", "INVALID_COLUMN"])
 
-    expected_output = [
-        [1.0, pd.to_datetime("2022-06-01 23:13:45"), 6, 23, "Wednesday"]
-    ]
-    df_expected_output = pd.DataFrame(data=expected_output, columns=["column1", "date_time", "month", "hour", "day_of_week"])
-    df_test_output = src.data_preprocessing.create_datetime_features(data=df_input_test,
+    with pytest.raises(KeyError):
+        src.data_preprocessing.create_datetime_features(data=df_input_test,
                                                                      original_datetime_column="date_time",
                                                                      month_column="month",
                                                                      hour_column="hour",
                                                                      day_of_week_column="day_of_week")
-    pd.testing.assert_frame_equal(df_expected_output, df_test_output)
+
 
 def test_validate_date_time():
     assert src.data_preprocessing.validate_date_time("2022-06-01 23:13:45"), pd.to_datetime("2022-06-01 23:13:45")
@@ -260,16 +245,12 @@ def test_one_hot_encoding_invalid_columns():
     ]
     df_input_test = pd.DataFrame(data=input_test, columns=["column1", "column2"])
 
-    df_expected_output = pd.DataFrame()
-    expected_one_hot_encoder = sklearn.preprocessing.OneHotEncoder(drop='first', sparse=False)
+    with pytest.raises(KeyError):
+        src.data_preprocessing.one_hot_encoding(data=df_input_test,
+                                              one_hot_encode_columns=["INVALID_COLUMN"],
+                                              sparse=False,
+                                              drop="first")
 
-    df_test_output, test_output_one_hot_encoder = src.data_preprocessing.one_hot_encoding(data=df_input_test,
-                                                                                          one_hot_encode_columns=["INVALID_COLUMN"],
-                                                                                          sparse=False,
-                                                                                          drop="first")
-
-    pd.testing.assert_frame_equal(df_expected_output, df_test_output)
-    assert expected_one_hot_encoder.get_params() == test_output_one_hot_encoder.get_params()
 
 def test_create_train_test_split():
     input_test = [
@@ -304,13 +285,9 @@ def test_create_train_test_split_invalid_parameters():
     ]
     df_input_test = pd.DataFrame(data=input_test, columns=["column1", "column2"])
 
-    df_expected_output_train = pd.DataFrame()
-    df_expected_output_test = pd.DataFrame()
+    with pytest.raises(ValueError):
+        src.data_preprocessing.create_train_test_split(data = df_input_test,
+                                                         test_size = 1.5,
+                                                         random_state=24,
+                                                         shuffle=True)
 
-    df_output_train, df_output_test = src.data_preprocessing.create_train_test_split(data = df_input_test,
-                                                                                     test_size = 1.5,
-                                                                                     random_state=24,
-                                                                                     shuffle=True)
-
-    pd.testing.assert_frame_equal(df_expected_output_train, df_output_train)
-    pd.testing.assert_frame_equal(df_expected_output_test, df_output_test)

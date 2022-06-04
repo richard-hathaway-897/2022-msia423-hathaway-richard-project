@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 
 import src.validate
 
@@ -19,6 +20,6 @@ def test_validate_dataframe_empty():
 
     df_input_test = pd.DataFrame()
 
-    true_output = src.validate.validate_dataframe(df_input_test, duplicated_method='first')
+    with pytest.raises(ValueError):
+        src.validate.validate_dataframe(df_input_test, duplicated_method='first')
 
-    assert not true_output

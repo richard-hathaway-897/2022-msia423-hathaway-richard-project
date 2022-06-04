@@ -82,7 +82,7 @@ def test_app_input_transformations():
 
 def test_app_input_transformations_invalid_user_input():
     input_test = [
-        [32000, 40, "INVALID_WEATHER", 10, 9, "INVALID_DAY_OF_WEEK", "None", 0.0]
+        ["Not a temp", 40, "Clouds", 10, 9, "Tuesday", "None", 0.0]
     ]
     df_input_test = pd.DataFrame(data=input_test, columns=["temp", "clouds_all", "weather_main",
                                                            "month", "hour", "day_of_week", "holiday",
@@ -90,7 +90,7 @@ def test_app_input_transformations_invalid_user_input():
 
 
 
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         src.preprocess_app_input.app_input_transformations(prediction_df=df_input_test,
                                                         log_transform_params=log_transform_params,
                                                         binarize_column_params=binarize_column_params,

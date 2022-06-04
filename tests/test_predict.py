@@ -54,13 +54,13 @@ def test_make_predictions_model_not_fit():
     ]
     df_input_test = pd.DataFrame(data=input_test, columns=["response", "column1", "column2"])
 
-    expected_output = pd.Series(dtype='float64')
 
-    test_output = src.predict.make_predictions(new_data = df_input_test,
+    with pytest.raises(ValueError):
+        src.predict.make_predictions(new_data = df_input_test,
                                                model = rf_test,
                                                response_column = "response",
                                                is_test_data = True)
-    pd.testing.assert_series_equal(expected_output, test_output)
+
 
 def test_classify_traffic():
     assert "light", src.predict.classify_traffic(traffic_prediction=1000)

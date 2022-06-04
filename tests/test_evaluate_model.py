@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import pytest
 import sklearn
 
 import src.evaluate_model
@@ -38,8 +39,7 @@ def test_evaluate_model_too_few_predictions():
         [2.0, 1.0]
     ]
     df_input_test_true_value = pd.DataFrame(data=input_test_true_value, columns = ["response", "other_col"])
-    expected_output = {'R^2': np.nan,
-                       'MSE': np.nan}
-    test_output = src.evaluate_model.evaluate_model(test=df_input_test_true_value, predictions=df_input_test_prediction,
+
+    with pytest.raises(ValueError):
+        src.evaluate_model.evaluate_model(test=df_input_test_true_value, predictions=df_input_test_prediction,
                                                     response_column="response")
-    assert test_output==expected_output
