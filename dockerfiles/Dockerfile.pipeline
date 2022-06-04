@@ -6,8 +6,6 @@ WORKDIR /app
 
 RUN pip3 install --upgrade pip
 RUN pip3 install -r requirements.txt
-RUN pip3 install fsspec==2022.3.0
-RUN pip3 install s3fs==2022.3.0
 
 COPY . /app
 
