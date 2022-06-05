@@ -28,7 +28,7 @@ class HistoricalQueries(Base):
     month = Column(Integer, unique=False, nullable=False)  # Month
     hour = Column(Integer, unique=False, nullable=False)  # Hour
     day_of_week = Column(String(15), unique=False, nullable=False)  # Day of week
-    holiday = Column(Integer, unique=False, nullable=False)  # Holiday, binary 1 or 0 indicating a holiday
+    holiday = Column(String(15), unique=False, nullable=False)  # Holiday
     rainfall_hour = Column(Integer, unique=False, nullable=False)  # Total rainfall in millimeters that fell in 1 hour
 
     def __repr__(self) -> str:
@@ -197,15 +197,7 @@ class QueryManager:
                         HistoricalQueries.day_of_week == query_params["day_of_week"],
                         HistoricalQueries.holiday == query_params["holiday"],
                         HistoricalQueries.rainfall_hour == int(float(query_params["rain_1h"]))).count()
-            # query_count = session.query(HistoricalQueries)\
-            #     .filter(HistoricalQueries.temperature == query_params["temp"],
-            #             HistoricalQueries.cloud_percentage == query_params["clouds_all"],
-            #             HistoricalQueries.weather_description == query_params["weather_main"],
-            #             HistoricalQueries.month == query_params["month"],
-            #             HistoricalQueries.hour == query_params["hour"],
-            #             HistoricalQueries.day_of_week == query_params["day_of_week"],
-            #             HistoricalQueries.holiday == query_params["holiday"],
-            #             HistoricalQueries.rainfall_hour == query_params["rain_1h"]).count()
+
         except sqlite3.OperationalError as database_exception:
             logger.error("Failed to query to the sqlite database. %s", database_exception)
             raise database_exception
