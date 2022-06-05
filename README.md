@@ -108,8 +108,6 @@ The repository contains the following scripts, modules, and pipelines which were
    2. `Dockerfile.pipeline` - The dockerfile used to run the entire model pipeline
    3. `Dockerfile.app` - The Dockerfile used for running the web app
    4. `Dockerfile.test` - The dockerfile for running the unit tests
-   5. `Dockerfile.pylint` - The dockerfile used for code linting
-   6. `Dockerfile.mypy` - The dockerfile used for mypy
 6. **models** - Folder to store trained model objects
 7. **src** - Folder to hold any source python modules
    1. `app_module.py` - module for running app functions such as prediction
@@ -172,7 +170,7 @@ docker build -f dockerfiles/Dockerfile -t final-project .
 
 Run the following command to acquire the raw data and save it to S3:
 ```bash
-docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY  --mount type=bind,source="$(pwd)",target=/app/data/ final-project fetch -- path_s3=s3://2022-msia423-hathaway-richard/raw_data/metro_interstate_traffic_volume.csv --data_url=https://archive.ics.uci.edu/ml/machine-learning-databases/00492/Metro_Interstate_Traffic_Volume.csv.gz
+docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY  --mount type=bind,source="$(pwd)",target=/app/data/ final-project fetch --path_s3=s3://2022-msia423-hathaway-richard/raw_data/metro_interstate_traffic_volume.csv --data_url=https://archive.ics.uci.edu/ml/machine-learning-databases/00492/Metro_Interstate_Traffic_Volume.csv.gz
 ```
 
 ### 3. Running each individual step of the model pipeline
@@ -229,7 +227,7 @@ docker build -f dockerfiles/Dockerfile.pipeline -t final-project-pipeline .
 
 Then run the following command:
 ```bash
-docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY --mount type=bind,source="$(pwd)",target=/app/data/ final-project-pipeline run-pipeline.sh
+docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY --mount type=bind,source="$(pwd)",target=/app/ final-project-pipeline run-pipeline.sh
 ```
 
 ### 5. Run the Flask app 
