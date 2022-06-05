@@ -7,8 +7,11 @@
 
 <body>
     <h2>
-         <a href = "{{ url_for('index') }}">Traffic Predictions on Westbound I-94 at Minnesota DoT ATR Station 301</a>
+         <a href = "{{ url_for('index') }}">Traffic Predictions in the Twin Cities</a>
     </h2>
+    <h4>
+        Predicting traffic volume on westbound I-94 at Minnesota DoT ATR Station 301
+    </h4>
 
     <hr/>
 
@@ -23,10 +26,10 @@
       <dl>
         <input type=text size=15 name=temperature placeholder="Temperature">
         <input type=text size=15 name=cloud_percentage placeholder="Percentage of Cloud Cover">
-        <input type=text size=15 name=weather_description placeholder="Weather Description"> <!--make this a check box-->
+        <input type=text size=15 name=weather_description placeholder="Weather Description">
         <input type=text size=15 name=month placeholder="Month">
         <input type=text size=15 name=hour placeholder="Hour">
-        <input type=text size=15 name=day_of_week placeholder="Day Of Week"> <!--could be calculated from d/m/y-->
+        <input type=text size=15 name=day_of_week placeholder="Day Of Week">
         <input type=text size=15 name=holiday placeholder="Holiday">
         <input type=text size=15 name=rainfall_hour placeholder="Hourly Rainfall in millimeters">
         <input type=submit value=Add class="submit_button">
@@ -75,8 +78,8 @@
                 </tr>
              </thead>
 
-             <tbody>
-                {% for query in user_query %}  <!-- 'tracks' comes from the render_template in index function -->
+             <tbody id = "top_5_table">
+                {% for query in user_query %}
                    <tr>
                        <td>{{ query.query_count }}</td>
                        <td>{{ query.predicted_traffic_count }}</td>
@@ -111,7 +114,7 @@
                 </tr>
 
             </thead>
-            <tbody>
+            <tbody id = "like_dislike_table">
                 {% for like_dislike in like_dislike_count %}
                    <tr>
                        <td>{{ like_dislike.likes }}</td>
@@ -123,9 +126,6 @@
 
 
     </div>
-
-
-
 
 </body>
 </html>
