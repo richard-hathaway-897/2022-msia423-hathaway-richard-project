@@ -6,6 +6,7 @@ __pycache__/
 .idea/
 .log
 .ipynb_checkpoints/
+.pylintrc
 
 config/local/*
 !.gitkeep
