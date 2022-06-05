@@ -107,6 +107,7 @@ def app_input_transformations(prediction_df: pd.DataFrame,
         # This error will occur if columns to binarize do not exist in the user input
         logger.error("Failed to binarize columns.")
         raise binarize_error
+    logger.debug("Binarized user input columns.")
 
     # Log transform columns
     try:
@@ -115,6 +116,7 @@ def app_input_transformations(prediction_df: pd.DataFrame,
         # Handle all errors from log-transformation in the same manner.
         logger.error("Failed to log transform the specified columns.")
         raise log_transform_error
+    logger.debug("Log-transformed user input columns.")
 
     # Convert fahrenheit to kelvin
     try:
@@ -124,6 +126,7 @@ def app_input_transformations(prediction_df: pd.DataFrame,
         # This error will occur if input temperature is not a float or an integer
         logger.error("Failed to convert from fahrenheit to kelvin.")
         raise temp_conversion_error
+    logger.debug("Converted from fahrenheit to kelvin.")
 
     # Drop columns not needed after transformations
     cols_drop = list(log_transform_params["log_transform_column_names"]) + \
@@ -141,7 +144,7 @@ def app_input_transformations(prediction_df: pd.DataFrame,
         # an error is raised here.
         logger.error("Failed to remove outliers.")
         raise remove_outlier_error
-
+    logger.debug("Successfully removed outliers (if any).")
     prediction_df = prediction_df.reset_index(drop=True)
     return prediction_df
 

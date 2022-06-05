@@ -22,14 +22,14 @@ class HistoricalQueries(Base):
     query_number = Column(Integer, primary_key=True)  # primary key
     query_count = Column(Integer, unique=False, nullable=False)  # Number of times the particular query has been called.
     predicted_traffic_count = Column(Float, unique=False, nullable=False)  # Predicted traffic count
-    temperature = Column(Float, unique=False, nullable=False)  # Temperature
+    temperature = Column(Integer, unique=False, nullable=False)  # Temperature
     cloud_percentage = Column(Integer, unique=False, nullable=False)  # Percentage of Cloud Cover
     weather_description = Column(String(30), unique=False, nullable=False)  # Descriptor of the weather
-    month = Column(Integer, unique = False, nullable=False)  # Month
-    hour = Column(Integer, unique = False, nullable=False)  # Hour
+    month = Column(Integer, unique=False, nullable=False)  # Month
+    hour = Column(Integer, unique=False, nullable=False)  # Hour
     day_of_week = Column(String(15), unique=False, nullable=False)  # Day of week
     holiday = Column(Integer, unique=False, nullable=False)  # Holiday, binary 1 or 0 indicating a holiday
-    rainfall_hour = Column(Float, unique=False, nullable=False)  # Total rainfall in millimeters that fell in 1 hour
+    rainfall_hour = Column(Integer, unique=False, nullable=False)  # Total rainfall in millimeters that fell in 1 hour
 
     def __repr__(self) -> str:
         """This function defines the string representation of the HistoricalQueries table
@@ -146,17 +146,18 @@ class QueryManager:
 
         """
         # Create the HistoricalQueries object
+        # Note, must cast to an integer, otherwise SQL database will fail to return a match on future queries.
         session = self.session
         user_query = HistoricalQueries(query_count=config.database_config.INITIAL_QUERY_COUNT,
                                        predicted_traffic_count=query_prediction,
-                                       temperature=query_params["temp"],
-                                       cloud_percentage=query_params["clouds_all"],
+                                       temperature=int(float(query_params["temp"])),
+                                       cloud_percentage=int(float(query_params["clouds_all"])),
                                        weather_description=query_params["weather_main"],
                                        month=query_params["month"],
                                        hour=query_params["hour"],
                                        day_of_week=query_params["day_of_week"],
                                        holiday=query_params["holiday"],
-                                       rainfall_hour=query_params["rain_1h"])
+                                       rainfall_hour=int(float(query_params["rain_1h"])))
         session.add(user_query)
         try:
             session.commit()
@@ -185,16 +186,26 @@ class QueryManager:
         """
         session = self.session
         # Search for the number of rows matching the input query
+        # Note, must cast to an integer, otherwise SQL database will fail to return a match.
         try:
             query_count = session.query(HistoricalQueries)\
-                .filter(HistoricalQueries.temperature == query_params["temp"],
-                        HistoricalQueries.cloud_percentage == query_params["clouds_all"],
+                .filter(HistoricalQueries.temperature == int(float(query_params["temp"])),
+                        HistoricalQueries.cloud_percentage == int(float(query_params["clouds_all"])),
                         HistoricalQueries.weather_description == query_params["weather_main"],
                         HistoricalQueries.month == query_params["month"],
                         HistoricalQueries.hour == query_params["hour"],
                         HistoricalQueries.day_of_week == query_params["day_of_week"],
                         HistoricalQueries.holiday == query_params["holiday"],
-                        HistoricalQueries.rainfall_hour == query_params["rain_1h"]).count()
+                        HistoricalQueries.rainfall_hour == int(float(query_params["rain_1h"]))).count()
+            # query_count = session.query(HistoricalQueries)\
+            #     .filter(HistoricalQueries.temperature == query_params["temp"],
+            #             HistoricalQueries.cloud_percentage == query_params["clouds_all"],
+            #             HistoricalQueries.weather_description == query_params["weather_main"],
+            #             HistoricalQueries.month == query_params["month"],
+            #             HistoricalQueries.hour == query_params["hour"],
+            #             HistoricalQueries.day_of_week == query_params["day_of_week"],
+            #             HistoricalQueries.holiday == query_params["holiday"],
+            #             HistoricalQueries.rainfall_hour == query_params["rain_1h"]).count()
         except sqlite3.OperationalError as database_exception:
             logger.error("Failed to query to the sqlite database. %s", database_exception)
             raise database_exception
@@ -222,9 +233,10 @@ class QueryManager:
         """
         session = self.session
         # Increment the query count for the given query.
-        session.query(HistoricalQueries).filter(HistoricalQueries.temperature == query_params["temp"],
-                                                HistoricalQueries.cloud_percentage == query_params[
-                                                  "clouds_all"],
+        # Note, must cast to an integer, otherwise SQL database will fail to return a match on future queries.
+        session.query(HistoricalQueries).filter(HistoricalQueries.temperature == int(float(query_params["temp"])),
+                                                HistoricalQueries.cloud_percentage == int(float(query_params[
+                                                  "clouds_all"])),
                                                 HistoricalQueries.weather_description == query_params[
                                                   "weather_main"],
                                                 HistoricalQueries.month == query_params["month"],
@@ -232,8 +244,8 @@ class QueryManager:
                                                 HistoricalQueries.day_of_week == query_params[
                                                   "day_of_week"],
                                                 HistoricalQueries.holiday == query_params["holiday"],
-                                                HistoricalQueries.rainfall_hour == query_params[
-                                                    "rain_1h"]).update(
+                                                HistoricalQueries.rainfall_hour == int(float(query_params[
+                                                    "rain_1h"]))).update(
                                                 {"query_count": HistoricalQueries.query_count +
                                                  config.database_config.INCREMENT_VALUE})
         try:

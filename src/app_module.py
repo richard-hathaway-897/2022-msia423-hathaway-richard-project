@@ -56,8 +56,9 @@ def run_app_prediction(new_query_params: dict,
                                                         config_dict["process_user_input"]["validate_user_input"])
     except ValueError as val_error:
         # This error will occur if the user input fails the validation step.
-        logger.error("An input data type was not valid.")
+        logger.error("An input data type was not valid. %s", val_error)
         raise val_error
+    logger.info("Successfully validated user input.")
 
     # Try to run prediction pre-processing steps such as data transformations and one-hot-encoding on the input
     # user data.
@@ -66,14 +67,15 @@ def run_app_prediction(new_query_params: dict,
             predict_preprocess(predictors=predictors,
                                one_hot_encoder=one_hot_encoder,
                                remove_outlier_params=config_dict["remove_outliers"],
-                               **config_dict["preprocess_user_input"]["app_input_transformations"],
+                               **config_dict["process_user_input"]["app_input_transformations"],
                                **config_dict["generate_features"]["pipeline_and_app"])
     # Catch both TypeError and KeyError in one except block. More detailed exception handling occurs in the module,
     # where there are custom logging messages for each individual exception. Here, because I want to handle these
     # errors in the same way, it is more succinct to catch them in one except block.
     except (TypeError, KeyError) as preprocess_error:
-        logger.error("Failed to complete data preprocessing steps of user input.")
+        logger.error("Failed to complete data preprocessing steps of user input. %s", preprocess_error)
         raise preprocess_error
+    logger.info("Successfully preprocessed user input.")
 
     # Create the prediction
     try:
@@ -83,9 +85,9 @@ def run_app_prediction(new_query_params: dict,
     # where there are custom logging messages for each individual exception. Here, because I want to handle these
     # errors in the same way, it is more succinct to catch them in one except block.
     except (KeyError, ValueError) as prediction_error:
-        logger.error("Failed to make prediction.")
+        logger.error("Failed to make prediction. %s", prediction_error)
         raise prediction_error
-
+    logger.info("Successfully made prediction.")
     # Classify the prediction into light, medium, or heavy traffic.
     try:
         traffic_volume = src.predict.classify_traffic(prediction[0])
@@ -97,9 +99,8 @@ def run_app_prediction(new_query_params: dict,
     return prediction, traffic_volume
 
 
-def run_update_historical_queries(query_manager:QueryManager,
+def run_update_historical_queries(query_manager: QueryManager,
                                   new_query_params: dict,
-                                  database_uri_string: str,
                                   prediction: float) -> None:
     """This function is an orchestration function that runs functions for updating the HistoricalQueries table
     after a user makes a query by either adding the query to the table, or, if the query already exists in the database,
@@ -109,7 +110,6 @@ def run_update_historical_queries(query_manager:QueryManager,
         query_manager (src.create_tables_rds.QueryManager): The QueryManager object that creates the sqlalchemy
             connection to the database.
         new_query_params (dict): The user input as a dictionary.
-        database_uri_string (str): The SQLALCHEMY_DATABASE_URI environment variable
         prediction (float): The value of the model's prediction.
 
     Returns:
@@ -129,8 +129,7 @@ def run_update_historical_queries(query_manager:QueryManager,
     try:
         query_count = query_manager.search_for_query_count(query_params=new_query_params)
     except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
-        logger.error("Error page returned. Not able to locate query in the database: %s. Error: %s ",
-                     database_uri_string, database_exception)
+        logger.error("Error page returned. Not able to locate query in the database. %s ", database_exception)
         raise database_exception
 
     # If the query does not exist in the database (the row count will be zero):
@@ -142,8 +141,7 @@ def run_update_historical_queries(query_manager:QueryManager,
                                         query_prediction=prediction)
 
         except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
-            logger.error("Error page returned. Not able to add query to the database: %s. Error: %s ",
-                         database_uri_string, database_exception)
+            logger.error("Error page returned. Not able to add query to the database. %s ", database_exception)
             raise database_exception
         else:
             logger.info("Successfully added query to the historical queries table.")
@@ -153,15 +151,14 @@ def run_update_historical_queries(query_manager:QueryManager,
         try:
             query_manager.increment_query_count(query_params=new_query_params)
         except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
-            logger.error("Error page returned. Not able to increment query count in the database: %s. Error: %s ",
-                         database_uri_string, database_exception)
+            logger.error("Error page returned. Not able to increment query count in the database. %s ",
+                         database_exception)
             raise database_exception
         else:
             logger.info("Successfully incremented the query count for the passed query.")
 
 
 def run_update_active_prediction(query_manager: QueryManager,
-                                 database_uri_string: str,
                                  prediction: float,
                                  traffic_volume: str) -> None:
     """This function is an orchestration function that runs functions for updating the ActivePrediction table
@@ -171,7 +168,6 @@ def run_update_active_prediction(query_manager: QueryManager,
     Args:
         query_manager (src.create_tables_rds.QueryManager): The QueryManager object that creates the sqlalchemy
             connection to the database.
-        database_uri_string (str): The SQLALCHEMY_DATABASE_URI environment variable
         prediction (float): The value of the model's prediction.
         traffic_volume (str): A string of either 'light', 'medium', or 'heavy' that indicates the traffic level.
 
@@ -192,8 +188,8 @@ def run_update_active_prediction(query_manager: QueryManager,
     try:
         row_count = query_manager.session.query(ActivePrediction).count()
     except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
-        logger.error("Error page returned. Not able to query active prediction table in the database: %s. Error: %s ",
-                     database_uri_string, database_exception)
+        logger.error("Error page returned. Not able to query active prediction table in the database. %s ",
+                     database_exception)
         raise database_exception
 
     # If the table is empty (The row count will be zero)
@@ -203,7 +199,7 @@ def run_update_active_prediction(query_manager: QueryManager,
             query_manager.create_most_recent_query()
         except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
             logger.error("Error page returned. Not able to create an empty row in the ActivePredictions table in the "
-                         "database: %s. Error: %s ", database_uri_string, database_exception)
+                         "database. %s ", database_exception)
             raise database_exception
         else:
             logger.info("Created an empty row in ActivePredictions table.")
@@ -212,8 +208,8 @@ def run_update_active_prediction(query_manager: QueryManager,
     try:
         query_manager.update_active_prediction(new_prediction_value=prediction, new_volume=traffic_volume)
     except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
-        logger.error("Error page returned. Not able to update the active prediction in the database: %s. Error: %s ",
-                      database_uri_string, database_exception)
+        logger.error("Error page returned. Not able to update the active prediction in the database. %s ",
+                     database_exception)
         raise database_exception
     else:
         logger.info("Updated the active prediction.")

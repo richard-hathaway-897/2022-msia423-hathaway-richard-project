@@ -75,8 +75,8 @@ def index():
             .all())
         logger.debug("Retrieve top 5 historical queries.")
     except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
-        logger.error("Not able to query the database: %s. %s ",
-                     app.config["SQLALCHEMY_DATABASE_URI"], database_exception)
+        logger.error("Not able to query the database: %s.",
+                     database_exception)
         return render_template("database_error.html")
 
     # Query the ActivePrediction table to get the most recent prediction.
@@ -84,8 +84,8 @@ def index():
         most_recent_prediction = query_manager.session.query(ActivePrediction).first()
         logger.debug("Retrieve most recent prediction.")
     except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
-        logger.error("Not able to retrieve the active prediction from the database: %s. %s ",
-            app.config["SQLALCHEMY_DATABASE_URI"], database_exception)
+        logger.error("Not able to retrieve the active prediction from the database. %s ",
+                     database_exception)
         return render_template("database_error.html")
 
     # Query the AppMetrics table to get the count of likes and dislikes of the web app.
@@ -93,8 +93,8 @@ def index():
         like_dislike_count = query_manager.session.query(AppMetrics).all()
         logger.info("Retrieve likes and dislikes.")
     except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
-        logger.error("Not able to retrieve the likes and dislikes from the database: %s. %s ",
-                     app.config["SQLALCHEMY_DATABASE_URI"], database_exception)
+        logger.error("Not able to retrieve the likes and dislikes from the database. %s ",
+                     database_exception)
         return render_template("database_error.html")
 
     logger.debug("Navigate to Index page.")
@@ -155,7 +155,6 @@ def enter_query_parameters():
         src.app_module.run_update_historical_queries(
             query_manager=query_manager,
             new_query_params=new_query_params,
-            database_uri_string=app.config["SQLALCHEMY_DATABASE_URI"],
             prediction=np.round(prediction[0]))
     # For this function, catch both sqlite3.OperationalError and sqlalchemy.exc.OperationalError in one except statement
     # because both exceptions need to be handled in the same way, which is returning the database_error.html page.
@@ -167,7 +166,6 @@ def enter_query_parameters():
     try:
         src.app_module.run_update_active_prediction(
             query_manager=query_manager,
-            database_uri_string=app.config["SQLALCHEMY_DATABASE_URI"],
             prediction=np.round(prediction[0]),
             traffic_volume=traffic_volume)
     # For this function, catch both sqlite3.OperationalError and sqlalchemy.exc.OperationalError in one except statement
@@ -197,8 +195,7 @@ def increment_like_dislike():
     try:
         row_count = query_manager.session.query(AppMetrics).count()
     except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
-        logger.error("Not able to query likes/dislikes table in the" "database: %s. %s ",
-                     app.config["SQLALCHEMY_DATABASE_URI"],
+        logger.error("Not able to query likes/dislikes table in the" "database. %s ",
                      database_exception)
         return render_template("database_error.html")
 
@@ -210,7 +207,7 @@ def increment_like_dislike():
         except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
             logger.error(
                 "Not able to create row likes/dislikes table in the"
-                "database: %s. %s ", app.config["SQLALCHEMY_DATABASE_URI"], database_exception)
+                "database. %s ", database_exception)
             return render_template("database_error.html")
         else:
             logger.info("Created an empty row in likes/dislikes table.")
@@ -220,8 +217,8 @@ def increment_like_dislike():
         try:
             query_manager.increment_like()
         except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
-            logger.error("Not able to increment number of likes in the" "database: %s. %s ",
-                         app.config["SQLALCHEMY_DATABASE_URI"], database_exception)
+            logger.error("Not able to increment number of likes in the" "database. %s ",
+                         database_exception)
             return render_template("database_error.html")
         else:
             logger.info("Incremented the likes.")
@@ -231,8 +228,7 @@ def increment_like_dislike():
         try:
             query_manager.increment_dislike()
         except (sqlite3.OperationalError, sqlalchemy.exc.OperationalError) as database_exception:
-            logger.error("Not able to increment number of dislikes in the" "database: %s. %s ",
-                         app.config["SQLALCHEMY_DATABASE_URI"],
+            logger.error("Not able to increment number of dislikes in the database. %s ",
                          database_exception)
             return render_template("database_error.html")
         else:
