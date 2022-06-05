@@ -1,8 +1,9 @@
 import logging.config
+import typing
 
 import sqlite3
 import sqlalchemy.exc
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, Response
 import numpy as np
 
 from src.create_tables_rds import (
@@ -50,14 +51,15 @@ except sqlalchemy.exc.OperationalError as database_error:
 
 
 @app.route("/")
-def index():
+def index() -> str:
     """This function queries the database for information needed to render the index page of web application.
     Index.html will display the most recent prediction, the top 5 most popular predictions, and the number of likes
     and dislikes the application has received.
     Index.html is stored in app/templates/index.html template.
 
     Returns:
-        This function returns the rendered index.html page.
+        (str): This function returns the rendered index.html page or the rendered database_error.html page if an error
+         is encountered.
 
     Raises:
         This function does not raise any exceptions.
@@ -106,13 +108,14 @@ def index():
 
 
 @app.route("/add", methods=["POST"])
-def enter_query_parameters():
+def enter_query_parameters() -> typing.Union[Response, str]:
     """This is an orchestration function that retrieves the user input from the web application form and then calls
     functions that generate a prediction using that user input. It also updates the necessary database tables after
     the prediction is completed.
 
     Returns:
-        This function returns a redirect for the index.html page.
+        typing.Union[Response, str]: This function returns a redirect for the index.html page or renders the template
+        of error.html or database_error.html.
 
     Raises:
         This function does not raise any exceptions.
@@ -178,12 +181,13 @@ def enter_query_parameters():
 
 
 @app.route("/like", methods=["POST"])
-def increment_like_dislike():
+def increment_like_dislike() -> typing.Union[Response, str]:
     """This function increments the like or dislike count whenever the user clicks the "Like" or "Dislike" button on
     the web app page.
 
     Returns:
-        This function returns a redirect for the index.html page.
+        typing.Union[Response, str]: This function returns a redirect for the index.html page or renders the template
+        of database_error.html.
 
     Raises:
         This function does not raise any exceptions.
