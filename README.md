@@ -279,31 +279,3 @@ To run the tests, run:
 ```bash
 docker run final-project-tests
 ```
-
-## 7. Mypy
-
-To run mypy on the repository, first build the image:
-
-```bash
-docker build -f dockerfiles/Dockerfile.mypy -t final-project-mypy .
-```
-
-Then run the following command: 
-
-```bash
-docker run final-project-mypy .
-```
-
-## 8. Pylint
-
-To run pylint, first build the image:
-
-```bash
- docker build -f dockerfiles/Dockerfile.pylint -t final-project-lint .
-```
-
-Then run the following command for each file and replace <file_name> with the file name:
-
-```bash
- docker run final-project-lint <file_name> 
-```
