@@ -3,7 +3,7 @@
 
 # Table of Contents
 * [Project Charter](#Project-Charter)
-* [Application Overview](#Application-Overview)
+* [Application](#Application)
 * [Project Design Decisions](#Project-Design-Decisions)
 * [Directory structure ](#Directory-structure)
 * [Running the app ](#Running-the-app)
@@ -42,7 +42,23 @@ Additionally, when the web application is deployed to the public, data on user s
 
 ## Application
 
-This web application enables a user to predict the traffic volume at westbound Interstate 94 at Minnesota DoT ATR Station 301
+This web application enables a user to predict the traffic volume at westbound Interstate 94 at Minnesota DoT ATR Station 301 given several input variables. In order to generate these predictions, the user must input the following items:
+
+**Temperature:** Enter a temperature between -40 and 115 degrees fahrenheit.
+
+**Percentage of Cloud Cover:** Enter a value between 0 and 100.
+
+**Weather Description:** Enter a weather description. Valid values are (case_sensitive): Clouds, Clear, Mist, Rain, Snow, Drizzle, Haze, Thunderstorm, Fog, Smoke, and Squall
+
+**Month:** Enter a numeric value between 1 and 12 for the month.
+
+**Hour:** Enter a numeric value between 0 and 23 for the hour.
+
+**Day Of Week:** Enter a day of the week (case_sensitive): Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, or Saturday.
+
+**Holiday:** Enter "None" if the date is not a holiday. Any other value will be treated as a holiday.
+
+**Hourly Rainfall in mm:** Enter a value between 0 and 300 for the hourly rainfall in mm.
 
 
 ## Project Design Decisions
@@ -129,37 +145,89 @@ The repository contains the following scripts, modules, and pipelines which were
 ### 1. Initialize the database 
 #### Build the image 
 
-To build the image, run from this directory (the root of the repo): 
+To build the image, run this image from the root of the repository: 
 
 ```bash
 docker build -f dockerfiles/Dockerfile -t final-project .
 ```
 
-#### Write Raw Data to S3
+#### Create the database 
+To create the database in the location configured in `flaskconfig.py` run: 
+
+```bash
+docker run -e SQLALCHEMY_DATABASE_URI --mount type=bind,source="$(pwd)"/data,target=/app/ final-project create_db  --engine_string=${SQLALCHEMY_DATABASE_URI}
+```
+
+### 2. Acquring the Raw Data and Saving it in S3
+
+#### Build the image
+
+Build the same docker image from the previous step and run it from the root of the repository: 
+
+```bash
+docker build -f dockerfiles/Dockerfile -t final-project .
+```
+
+#### Acquire and Save to S3
+
+Run the following command to acquire the raw data and save it to S3:
 ```bash
 docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY  --mount type=bind,source="$(pwd)"/data,target=/app/data/ final-project fetch -- path_s3=s3://2022-msia423-hathaway-richard/raw_data/metro_interstate_traffic_volume.csv --data_url=https://archive.ics.uci.edu/ml/machine-learning-databases/00492/Metro_Interstate_Traffic_Volume.csv.gz
 ```
 
+### 3. Running each individual step of the model pipeline
+
+#### Build the image
+
+Build the same docker image from the previous step and run it from the root of the repository: 
+
+```bash
+docker build -f dockerfiles/Dockerfile -t final-project .
+```
+
 #### Read Data from S3 and Clean Data
+
+To read the raw data from S3 and clean the data, run:
 ```bash
-docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY  --mount type=bind,source="$(pwd)"/data,target=/app/data/ final-project clean --config_path=./config/model_config.yaml --input_source=s3://2022-msia423-hathaway-richard/raw_data/metro_interstate_traffic_volume.csv --output_path=./data/clean_data/cleaned_data.csv 
+docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY  --mount type=bind,source="$(pwd)"/data,target=/app/ final-project clean --config_path=./config/model_config.yaml --input_source=s3://2022-msia423-hathaway-richard/raw_data/metro_interstate_traffic_volume.csv --output_path=./data/clean_data/cleaned_data.csv 
 ```
 
-#### Create the database 
-To create the database in the location configured in `config.py` run: 
+#### Generate Features
 
+To generate features for model training, including splitting the data into train and test files, run:
 ```bash
-docker run -e SQLALCHEMY_DATABASE_URI --mount type=bind,source="$(pwd)"/data,target=/app/data/ final-project create_db  --engine_string=${SQLALCHEMY_DATABASE_URI}
+docker run --mount type=bind,source="$(pwd)"/data,target=/app/ final-project generate_features --config_path=./config/model_config.yaml --input_source=./data/clean_data/cleaned_data.csv --one_hot_path=./models/ohe_object.joblib --train_output_source=./data/train_test_data/train_data.csv --test_output_source=./data/train_test_data/test_data.csv
 ```
-The `--mount` argument allows the app to access your local `data/` folder and save the SQLite database there so it is available after the Docker container finishes.
+
+#### Train Model
+
+To train the model, run:
+```bash
+docker run --mount type=bind,source="$(pwd)"/data,target=/app/ final-project train_model --config_path=./config/model_config.yaml --train_input_source=./data/train_test_data/train_data.csv --model_output_source=./models/trained_model_object.joblib
+```
+
+#### Make Predictions
+
+To make predictions using the trained model, run:
+```bash
+docker run --mount type=bind,source="$(pwd)"/data,target=/app/ final-project predict --config_path=./config/model_config.yaml --test_input_source=./data/train_test_data/test_data.csv --model_input_source=./models/trained_model_object.joblib --predictions_output_source=./data/predictions/predictions.csv
+```
+
+#### Evaluate the Model
+
+To make evaluate the model performance and generate metrics such as R^2 and Mean-Squared-Error, run:
+```bash
+docker run --mount type=bind,source="$(pwd)"/data,target=/app/ final-project evaluate --config_path=./config/model_config.yaml --test_input_source=./data/train_test_data/test_data.csv --predictions_input_source=./data/predictions/predictions.csv --performance_metrics_output_source=./data/model_performance/performance_metrics.txt
+```
 
 #### Run the entire pipeline
-To run the entire pipeline, run: 
+To run the entire pipeline, from reading the data from S3 through model evaluation, first build the image in the root of the repository: 
 
 ```bash
 docker build -f dockerfiles/Dockerfile.pipeline -t final-project-pipeline .
 ```
 
+Then run the following command:
 ```bash
 docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY --mount type=bind,source="$(pwd)"/data,target=/app/data/ final-project-pipeline run-pipeline.sh
 ```
