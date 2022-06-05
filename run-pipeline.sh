@@ -1,5 +1,3 @@
-python3 run.py fetch --path_s3=s3://2022-msia423-hathaway-richard/raw_data/metro_interstate_traffic_volume.csv --data_url=https://archive.ics.uci.edu/ml/machine-learning-databases/00492/Metro_Interstate_Traffic_Volume.csv.gz
-
 python3 run.py clean --config_path=./config/model_config.yaml --input_source=s3://2022-msia423-hathaway-richard/raw_data/metro_interstate_traffic_volume.csv --output_path=./data/clean_data/cleaned_data.csv
 
 python3 run.py generate_features --config_path=./config/model_config.yaml --input_source=./data/clean_data/cleaned_data.csv --one_hot_path=./models/ohe_object.joblib --train_output_source=./data/train_test_data/train_data.csv --test_output_source=./data/train_test_data/test_data.csv
