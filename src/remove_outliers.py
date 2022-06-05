@@ -96,7 +96,7 @@ def remove_outliers(data: pd.DataFrame,
     data_outlier_shape = data.shape
 
     if data.empty:
-        logger.error("Failed to remove outliers. Returning an empty dataframe.")
+        logger.warning("All records were removed during outlier removal. Dataframe is now empty.")
 
     else:
         logger.info("After removing outliers, the data has %d records and %d columns. %d records were removed.",
