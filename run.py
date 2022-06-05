@@ -1,44 +1,33 @@
-"""Configures the subparsers for receiving command line arguments for each
- stage in the model pipeline and orchestrates their execution."""
 import argparse
 import logging.config
 
 from config.flaskconfig import SQLALCHEMY_DATABASE_URI
-from src.create_tables_rds import create_db
+import src.create_tables_rds
 import src.orchestrate
 import src.read_write_functions
 
-logging.config.fileConfig('config/logging/local.conf')
-logger = logging.getLogger('traffic-prediction-pipeline')
+logging.config.fileConfig("config/logging/local.conf")
+logger = logging.getLogger("traffic-prediction-pipeline")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Run the traffic prediction database creation, data ingestion,"
                                                  " and model pipeline.")
     # Define the subparsers
     subparsers = parser.add_subparsers(dest="action")
-    create_db_subparser = subparsers.add_parser("create_db", description="Create database")
-    initialize_tables_subparser = subparsers.add_parser("initialize_tables",
-                                                        description="Clear tables in the database and "
-                                                                    "recreate the initial states of tables.")
+    create_db_subparser = subparsers.add_parser("create_db", description="Create database.")
     fetch_data_subparser = subparsers.add_parser("fetch", description="Fetch the raw data.")
     clean_data_subparser = subparsers.add_parser("clean", description="Clean the raw data.")
     generate_features_subparser = subparsers.add_parser("generate_features", description="Generate model features.")
     train_model_subparser = subparsers.add_parser("train_model", description="Train model.")
-    predict_subparser = subparsers.add_parser("predict",
-                                                  description="Score the model (make predictions using the model).")
-    evaluate_subparser = subparsers.add_parser("evaluate",
-                                               description="Calculate model performance metrics.")
+    predict_subparser = subparsers.add_parser("predict", description="Make predictions using the model.")
+    evaluate_subparser = subparsers.add_parser("evaluate", description="Calculate model performance metrics.")
 
     # Create DB subparser
     create_db_subparser.add_argument("--engine_string",
                                      default=SQLALCHEMY_DATABASE_URI,
                                      help="SQLALCHEMY DATABASE URI connection string.")
 
-    # Initialize RDS Tables SubParser
-    initialize_tables_subparser.add_argument("--engine_string",
-                                             default=SQLALCHEMY_DATABASE_URI,
-                                             help="SQLALCHEMY DATABASE URI connection string.")
     # Fetch Data subparser
     fetch_data_subparser.add_argument("--path_s3", type=str,
                                       required=True,
@@ -115,11 +104,10 @@ if __name__ == '__main__':
     command_line_args = parser.parse_args()
     command_choice = command_line_args.action
 
-    if command_choice == 'create_db':
-        create_db(command_line_args.engine_string)
-    elif command_choice == 'initialize_tables':
-        pass
-    elif command_choice == 'fetch':
+    # Evaluate the action received by the subparser and execute the associated orchestration function.
+    if command_choice == "create_db":
+        src.create_tables_rds.create_db(command_line_args.engine_string)
+    elif command_choice == "fetch":
         src.orchestrate.fetch_data(command_line_args)
     else:
         # Every other option needs the yaml config file, so read it in here first before continuing.
@@ -128,16 +116,15 @@ if __name__ == '__main__':
         except FileNotFoundError:
             logger.error("Could not load in the YAML configuration file.")
         else:
-            if command_choice == 'clean':
+            if command_choice == "clean":
                 src.orchestrate.run_clean_data(command_line_args, config_dict=config_dict)
-            elif command_choice == 'generate_features':
+            elif command_choice == "generate_features":
                 src.orchestrate.run_generate_features(command_line_args, config_dict=config_dict)
-            elif command_choice == 'train_model':
+            elif command_choice == "train_model":
                 src.orchestrate.run_train_model(command_line_args, config_dict=config_dict)
-            elif command_choice == 'predict':
+            elif command_choice == "predict":
                 src.orchestrate.run_predict(command_line_args, config_dict=config_dict)
-            elif command_choice == 'evaluate':
+            elif command_choice == "evaluate":
                 src.orchestrate.run_evaluate(command_line_args, config_dict=config_dict)
             else:
                 parser.print_help()
-

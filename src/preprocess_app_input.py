@@ -127,7 +127,7 @@ def app_input_transformations(prediction_df: pd.DataFrame,
 
     # Drop columns not needed after transformations
     cols_drop = list(log_transform_params["log_transform_column_names"]) + \
-                list(binarize_column_params["binarize_column_names"])
+        list(binarize_column_params["binarize_column_names"])
     prediction_df = src.data_preprocessing.columns_drop(prediction_df, columns=cols_drop)
 
     # Perform data validation on the user input by calling invalid input an "outlier" and removing it.
