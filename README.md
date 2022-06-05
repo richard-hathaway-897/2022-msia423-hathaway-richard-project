@@ -155,7 +155,7 @@ docker build -f dockerfiles/Dockerfile -t final-project .
 To create the database in the location configured in `flaskconfig.py` run: 
 
 ```bash
-docker run -e SQLALCHEMY_DATABASE_URI --mount type=bind,source="$(pwd)"/data,target=/app/ final-project create_db  --engine_string=${SQLALCHEMY_DATABASE_URI}
+docker run -e SQLALCHEMY_DATABASE_URI --mount type=bind,source="$(pwd)",target=/app/ final-project create_db  --engine_string=${SQLALCHEMY_DATABASE_URI}
 ```
 
 ### 2. Acquring the Raw Data and Saving it in S3
@@ -172,7 +172,7 @@ docker build -f dockerfiles/Dockerfile -t final-project .
 
 Run the following command to acquire the raw data and save it to S3:
 ```bash
-docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY  --mount type=bind,source="$(pwd)"/data,target=/app/data/ final-project fetch -- path_s3=s3://2022-msia423-hathaway-richard/raw_data/metro_interstate_traffic_volume.csv --data_url=https://archive.ics.uci.edu/ml/machine-learning-databases/00492/Metro_Interstate_Traffic_Volume.csv.gz
+docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY  --mount type=bind,source="$(pwd)",target=/app/data/ final-project fetch -- path_s3=s3://2022-msia423-hathaway-richard/raw_data/metro_interstate_traffic_volume.csv --data_url=https://archive.ics.uci.edu/ml/machine-learning-databases/00492/Metro_Interstate_Traffic_Volume.csv.gz
 ```
 
 ### 3. Running each individual step of the model pipeline
@@ -189,38 +189,38 @@ docker build -f dockerfiles/Dockerfile -t final-project .
 
 To read the raw data from S3 and clean the data, run:
 ```bash
-docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY  --mount type=bind,source="$(pwd)"/data,target=/app/ final-project clean --config_path=./config/model_config.yaml --input_source=s3://2022-msia423-hathaway-richard/raw_data/metro_interstate_traffic_volume.csv --output_path=./data/clean_data/cleaned_data.csv 
+docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY  --mount type=bind,source="$(pwd)",target=/app/ final-project clean --config_path=./config/model_config.yaml --input_source=s3://2022-msia423-hathaway-richard/raw_data/metro_interstate_traffic_volume.csv --output_path=./data/clean_data/cleaned_data.csv 
 ```
 
 #### Generate Features
 
 To generate features for model training, including splitting the data into train and test files, run:
 ```bash
-docker run --mount type=bind,source="$(pwd)"/data,target=/app/ final-project generate_features --config_path=./config/model_config.yaml --input_source=./data/clean_data/cleaned_data.csv --one_hot_path=./models/ohe_object.joblib --train_output_source=./data/train_test_data/train_data.csv --test_output_source=./data/train_test_data/test_data.csv
+docker run --mount type=bind,source="$(pwd)",target=/app/ final-project generate_features --config_path=./config/model_config.yaml --input_source=./data/clean_data/cleaned_data.csv --one_hot_path=./models/ohe_object.joblib --train_output_source=./data/train_test_data/train_data.csv --test_output_source=./data/train_test_data/test_data.csv
 ```
 
 #### Train Model
 
 To train the model, run:
 ```bash
-docker run --mount type=bind,source="$(pwd)"/data,target=/app/ final-project train_model --config_path=./config/model_config.yaml --train_input_source=./data/train_test_data/train_data.csv --model_output_source=./models/trained_model_object.joblib
+docker run --mount type=bind,source="$(pwd)",target=/app/ final-project train_model --config_path=./config/model_config.yaml --train_input_source=./data/train_test_data/train_data.csv --model_output_source=./models/trained_model_object.joblib
 ```
 
 #### Make Predictions
 
 To make predictions using the trained model, run:
 ```bash
-docker run --mount type=bind,source="$(pwd)"/data,target=/app/ final-project predict --config_path=./config/model_config.yaml --test_input_source=./data/train_test_data/test_data.csv --model_input_source=./models/trained_model_object.joblib --predictions_output_source=./data/predictions/predictions.csv
+docker run --mount type=bind,source="$(pwd)",target=/app/ final-project predict --config_path=./config/model_config.yaml --test_input_source=./data/train_test_data/test_data.csv --model_input_source=./models/trained_model_object.joblib --predictions_output_source=./data/predictions/predictions.csv
 ```
 
 #### Evaluate the Model
 
 To make evaluate the model performance and generate metrics such as R^2 and Mean-Squared-Error, run:
 ```bash
-docker run --mount type=bind,source="$(pwd)"/data,target=/app/ final-project evaluate --config_path=./config/model_config.yaml --test_input_source=./data/train_test_data/test_data.csv --predictions_input_source=./data/predictions/predictions.csv --performance_metrics_output_source=./data/model_performance/performance_metrics.txt
+docker run --mount type=bind,source="$(pwd)",target=/app/ final-project evaluate --config_path=./config/model_config.yaml --test_input_source=./data/train_test_data/test_data.csv --predictions_input_source=./data/predictions/predictions.csv --performance_metrics_output_source=./data/model_performance/performance_metrics.txt
 ```
 
-#### Run the entire pipeline
+### 4. Run the entire pipeline
 To run the entire pipeline, from reading the data from S3 through model evaluation, first build the image in the root of the repository: 
 
 ```bash
@@ -229,169 +229,81 @@ docker build -f dockerfiles/Dockerfile.pipeline -t final-project-pipeline .
 
 Then run the following command:
 ```bash
-docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY --mount type=bind,source="$(pwd)"/data,target=/app/data/ final-project-pipeline run-pipeline.sh
+docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY --mount type=bind,source="$(pwd)",target=/app/data/ final-project-pipeline run-pipeline.sh
 ```
 
-
-#### Adding songs 
-To add songs to the database:
-
-```bash
-docker run --mount type=bind,source="$(pwd)"/data,target=/app/data/ pennylanedb ingest --engine_string=sqlite:///data/tracks.db --artist=Emancipator --title="Minor Cause" --album="Dusk to Dawn"
-```
-
-#### Defining your engine string 
-A SQLAlchemy database connection is defined by a string with the following format:
-
-`dialect+driver://username:password@host:port/database`
-
-The `+dialect` is optional and if not provided, a default is used. For a more detailed description of what `dialect` and `driver` are and how a connection is made, you can see the documentation [here](https://docs.sqlalchemy.org/en/13/core/engines.html). We will cover SQLAlchemy and connection strings in the SQLAlchemy lab session on 
-##### Local SQLite database 
-
-A local SQLite database can be created for development and local testing. It does not require a username or password and replaces the host and port with the path to the database file: 
-
-```python
-engine_string='sqlite:///data/tracks.db'
-
-```
-
-The three `///` denote that it is a relative path to where the code is being run (which is from the root of this directory).
-
-You can also define the absolute path with four `////`, for example:
-
-```python
-engine_string = 'sqlite://///Users/cmawer/Repos/2022-msia423-template-repository/data/tracks.db'
-```
-
-
-### 2. Configure Flask app 
-
-`config/flaskconfig.py` holds the configurations for the Flask app. It includes the following configurations:
-
-```python
-DEBUG = True  # Keep True for debugging, change to False when moving to production 
-LOGGING_CONFIG = "config/logging/local.conf"  # Path to file that configures Python logger
-HOST = "0.0.0.0" # the host that is running the app. 0.0.0.0 when running locally 
-PORT = 5000  # What port to expose app on. Must be the same as the port exposed in dockerfiles/Dockerfile.app 
-SQLALCHEMY_DATABASE_URI = 'sqlite:///data/tracks.db'  # URI (engine string) for database that contains tracks
-APP_NAME = "penny-lane"
-SQLALCHEMY_TRACK_MODIFICATIONS = True 
-SQLALCHEMY_ECHO = False  # If true, SQL for queries made will be printed
-MAX_ROWS_SHOW = 100 # Limits the number of rows returned from the database 
-```
-
-### 3. Run the Flask app 
+### 5. Run the Flask app 
 
 #### Build the image 
 
-To build the image, run from this directory (the root of the repo): 
+Build the image by running this command from the root of the repository: 
 
 ```bash
- docker build -f dockerfiles/Dockerfile.app -t trafficpredictionapp .
+docker build -f dockerfiles/Dockerfile.app -t final-project-app .
 ```
 
-This command builds the Docker image, with the tag `pennylaneapp`, based on the instructions in `dockerfiles/Dockerfile.app` and the files existing in this directory.
+#### Run the Flask Application
 
-#### Running the app
-
-To run the Flask app, run: 
+To run the Flask application, run: 
 
 ```bash
- docker run -e SQLALCHEMY_DATABASE_URI --name test-app --mount type=bind,source="$(pwd)"/data,target=/app/data/ -p 5000:5000 trafficpredictionapp
+ docker run -e SQLALCHEMY_DATABASE_URI --mount type=bind,source="$(pwd)",target=/app/ -p 5000:5000 final-project-app
 ```
-You should be able to access the app at http://127.0.0.1:5000/ in your browser (Mac/Linux should also be able to access the app at http://127.0.0.1:5000/ or localhost:5000/) .
-
-The arguments in the above command do the following: 
-
-* The `--name test-app` argument names the container "test". This name can be used to kill the container once finished with it.
-* The `--mount` argument allows the app to access your local `data/` folder so it can read from the SQLlite database created in the prior section. 
-* The `-p 5000:5000` argument maps your computer's local port 5000 to the Docker container's port 5000 so that you can view the app in your browser. If your port 5000 is already being used for someone, you can use `-p 5001:5000` (or another value in place of 5001) which maps the Docker container's port 5000 to your local port 5001.
-
-Note: If `PORT` in `config/flaskconfig.py` is changed, this port should be changed accordingly (as should the `EXPOSE 5000` line in `dockerfiles/Dockerfile.app`)
+You should be able to access the app at http://127.0.0.1:5000/ in your browser.
 
 
 #### Kill the container 
 
-Once finished with the app, you will need to kill the container. If you named the container, you can execute the following: 
+The app will need to be terminated once finished. To do so, execute the following commands:
 
-```bash
-docker kill test-app 
-```
-where `test-app` is the name given in the `docker run` command.
-
-If you did not name the container, you can look up its name by running the following:
-
+First find the name of the container.
 ```bash 
 docker container ls
 ```
-
-The name will be provided in the right most column. 
-
-## Testing
-
-Run the following:
+Next, kill the container:
 
 ```bash
- docker build -f dockerfiles/Dockerfile.test -t pennylanetest .
+docker kill <container name> 
+```
+
+### 6. Unit Tests
+
+To run the unit tests, first build the image using the following command:
+
+```bash
+docker build -f dockerfiles/Dockerfile.test -t final-project-tests .
 ```
 
 To run the tests, run: 
 
 ```bash
- docker run pennylanetest
+docker run final-project-tests
 ```
 
-The following command will be executed within the container to run the provided unit tests under `test/`:  
+## 7. Mypy
+
+To run mypy on the repository, first build the image:
 
 ```bash
-python -m pytest
-``` 
-
-## Mypy
-
-Run the following:
-
-```bash
- docker build -f dockerfiles/Dockerfile.mypy -t pennymypy .
+docker build -f dockerfiles/Dockerfile.mypy -t final-project-mypy .
 ```
 
-To run mypy over all files in the repo, run: 
+Then run the following command: 
 
 ```bash
- docker run pennymypy .
-```
-To allow for quick iteration, mount your entire repo so changes in Python files are detected:
-
-
-```bash
- docker run --mount type=bind,source="$(pwd)"/,target=/app/ pennymypy .
+docker run final-project-mypy .
 ```
 
-To run mypy for a single file, run: 
+## 8. Pylint
+
+To run pylint, first build the image:
 
 ```bash
- docker run pennymypy run.py
+ docker build -f dockerfiles/Dockerfile.pylint -t final-project-lint .
 ```
 
-## Pylint
-
-Run the following:
+Then run the following command for each file and replace <file_name> with the file name:
 
 ```bash
- docker build -f dockerfiles/Dockerfile.pylint -t pennylint .
-```
-
-To run pylint for a file, run:
-
-```bash
- docker run pennylint run.py 
-```
-
-(or any other file name, with its path relative to where you are executing the command from)
-
-To allow for quick iteration, mount your entire repo so changes in Python files are detected:
-
-
-```bash
- docker run --mount type=bind,source="$(pwd)"/,target=/app/ pennylint run.py
+ docker run final-project-lint <file_name> 
 ```
