@@ -8,7 +8,7 @@
 * [Directory structure ](#Directory-structure)
 * [Running the code ](#Running-the-code)
     * [1. Initialize the database ](#1.-Initialize-the-database)
-    * [2. Acquiring the Raw Data](#2.-Acquring-the-Raw_Data)
+    * [2. Acquiring the Raw Data](#2.-Acquiring-the-Raw-Data)
     * [3. Run each individual step of the model pipeline ](#3.-Run-each-individual-step-of-the-model-pipeline)
     * [4. Run the entire pipeline ](#4.-Run-the-entire-pipeline)
     * [5. Run the Flask app ](#5.-Run-the-Flask-app)
