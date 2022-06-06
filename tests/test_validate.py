@@ -15,7 +15,7 @@ def test_validate_dataframe():
     ]
     df_input_test = pd.DataFrame(data=input_test, columns=["column1", "column2"])
 
-    true_output = src.validate.validate_dataframe(df_input_test, duplicated_method='first')
+    true_output = src.validate.validate_dataframe(df_input_test, duplicated_method="first")
 
     assert true_output
 
@@ -28,4 +28,3 @@ def test_validate_dataframe_invalid_duplicated_input():
 
     with pytest.raises(ValueError):
         src.validate.validate_dataframe(df_input_test, duplicated_method=34)
-

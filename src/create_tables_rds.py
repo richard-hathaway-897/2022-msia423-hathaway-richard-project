@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 Base = declarative_base()
 
+
 class HistoricalQueries(Base):
     """
     This table will store a history of the queries that the web application has received.

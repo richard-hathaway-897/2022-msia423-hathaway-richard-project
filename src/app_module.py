@@ -30,7 +30,7 @@ def run_app_prediction(new_query_params: dict,
     Returns:
         prediction (pd.Series): The prediction as a pandas series. For the web app, because the user can only enter
             in one query at a time, the prediction will be a pandas series with one entry.
-        traffic_volume (str): A string of either 'light', 'medium', or 'heavy' classifying the traffic prediciton.
+        traffic_volume (str): A string of either 'light', 'medium', or 'heavy' classifying the traffic prediction.
     """
 
     # Try to read the one-hot-encoder
