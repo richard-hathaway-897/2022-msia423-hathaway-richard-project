@@ -2,19 +2,19 @@
 **Richard Hathaway, Spring 2022**
 
 # Table of Contents
-* [Project Charter](#Project-Charter)
+* [Project Charter and Background](#Project-Charter-and-Background)
 * [Application](#Application)
 * [Project Design Decisions](#Project-Design-Decisions)
 * [Directory structure ](#Directory-structure)
-* [Running the app ](#Running-the-app)
+* [Running the code ](#Running-the-code)
     * [1. Initialize the database ](#1.-Initialize-the-database)
-    * [2. Configure Flask app ](#2.-Configure-Flask-app)
-    * [3. Run the Flask app ](#3.-Run-the-Flask-app)
-* [Testing](#Testing)
-* [Mypy](#Mypy)
-* [Pylint](#Pylint)
+    * [2. Acquiring the Raw Data](#2.-Acquring-the-Raw_Data)
+    * [3. Run each individual step of the model pipeline ](#3.-Run-each-individual-step-of-the-model-pipeline)
+    * [4. Run the entire pipeline ](#4.-Run-the-entire-pipeline)
+    * [5. Run the Flask app ](#5.-Run-the-Flask-app)
+    * [6. Unit Tests ](#6.-Unit-Tests)
 
-## Project Charter
+## Project Charter and Background
 ### Vision
 The Minneapolis-St. Paul Metropolitan area is a metropolis of over 3.1 million people as of 2019 [1]. With a large population, traffic congestion is a significant problem for commuters, causing drivers in the Minneapolis-St. Paul region to lose an estimated 52 hours each in 2019, according to a summary of the INRIX 2019 Global Traffic Scorecard reported in the Minneapolis/St. Paul Business Journal [2]. Additionally, adverse weather, particularly in winter months, can cause major traffic issues and cause further disruptions. Understanding traffic patterns at different times of the year and at different hours of the day in the region is vital for city planners to develop solutions for mounting traffic problems and for commuters to be able to plan daily travel.
 
@@ -103,13 +103,14 @@ The repository contains the following scripts, modules, and pipelines which were
    3. **predictions** - Folder to store the model predictions.
    4. **train_test_data** - Folder to store data after feature generation, one-hot-encoding, and train/test split creation. 
 4. **deliverables** - Folder for project deliverables
-5. **dockerfiles** - Folder to hold dockerfiles
+   1. `Application Demo - MSiA 423.pdf` - The slides for the application demonstration.    
+6. **dockerfiles** - Folder to hold dockerfiles
    1. `Dockerfile` - The dockerfile for the project to run individual steps of the pipeline
    2. `Dockerfile.pipeline` - The dockerfile used to run the entire model pipeline
    3. `Dockerfile.app` - The Dockerfile used for running the web app
    4. `Dockerfile.test` - The dockerfile for running the unit tests
-6. **models** - Folder to store trained model objects
-7. **src** - Folder to hold any source python modules
+7. **models** - Folder to store trained model objects
+8. **src** - Folder to hold any source python modules
    1. `app_module.py` - module for running app functions such as prediction
    2. `clean_data.py` - module containing the functions for performing data cleaning operations
    3. `create_tables_rds` - module containing database table class and functions for creating, updating, and querying tables
@@ -123,7 +124,7 @@ The repository contains the following scripts, modules, and pipelines which were
    11. `remove_outliers` - module containing functions for removing outliers
    12. `train_model.py` - module containing functions for training a model object
    13. `validate.py` - module containing functions for performing data validation in the pipeline.
-8. **tests**
+9. **tests**
    1. `test_clean_data.py` - Unit tests for functions in clean_data.py
    2. `test_data_preprocessing.py` - Unit tests for functions in data_preprocessing.py
    3. `test_evaluate_model.py` - Unit tests for functions in evaluate_model.py
@@ -132,13 +133,20 @@ The repository contains the following scripts, modules, and pipelines which were
    6. `test_remove_outliers.py` - Unit tests for functions in remove_outliers.py
    7. `test_train_model.py` - Unit tests for functions in train_model.py
    8. `test_validate.py` - Unit tests for functions in validate.py
-9. `app.py` - Executable script that runs the web application
-10. `README.md` - Repository README
-11. `requirements.txt` - Environment requirements file
-12. `run.py` - Executable script for running steps in the model pipeline
-13. `run-pipeline.sh` - The bash script for executing all steps in the pipeline at once.
+10. `app.py` - Executable script that runs the web application
+11. `README.md` - Repository README
+12. `requirements.txt` - Environment requirements file
+13. `run.py` - Executable script for running steps in the model pipeline
+14. `run-pipeline.sh` - The bash script for executing all steps in the pipeline at once.
 
-## Running the app 
+## Running the code
+
+### run.py instructions
+
+The main executable script, `run.py` can take the following options as the first commandline argument: `create_db`, `fetch`, `clean`, `generate_features`, `train_model`, `predict`, and `evaluate`.
+
+The allowable flags for each of these options are discussed in the steps below.
+
 
 ### 1. Initialize the database 
 #### Build the image 
@@ -150,13 +158,17 @@ docker build -f dockerfiles/Dockerfile -t final-project .
 ```
 
 #### Create the database 
-To create the database in the location configured in `flaskconfig.py` run: 
+To create the database, using the configurations in `flaskconfig.py` and `database_config.py`, run: 
 
 ```bash
 docker run -e SQLALCHEMY_DATABASE_URI --mount type=bind,source="$(pwd)",target=/app/ final-project create_db  --engine_string=${SQLALCHEMY_DATABASE_URI}
 ```
 
-### 2. Acquring the Raw Data and Saving it in S3
+This command uses the `create_db` option. Additional allowable flags include:
+
+`--engine_string`: The SQLALCHEMY_DATABASE_URI connection string.
+
+### 2. Acquiring the Raw Data
 
 #### Build the image
 
@@ -166,14 +178,18 @@ Build the same docker image from the previous step and run it from the root of t
 docker build -f dockerfiles/Dockerfile -t final-project .
 ```
 
-#### Acquire and Save to S3
-
 Run the following command to acquire the raw data and save it to S3:
 ```bash
 docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY  --mount type=bind,source="$(pwd)",target=/app/data/ final-project fetch --path_s3=s3://2022-msia423-hathaway-richard/raw_data/metro_interstate_traffic_volume.csv --data_url=https://archive.ics.uci.edu/ml/machine-learning-databases/00492/Metro_Interstate_Traffic_Volume.csv.gz
 ```
 
-### 3. Running each individual step of the model pipeline
+This command uses the `fetch` option as the first command-line argument. Additional allowable flags include:
+
+`--path_s3`: S3 Path of the data to save the raw data to.
+
+`--data_url`: The url of the source raw data.
+
+### 3. Run each individual step of the model pipeline
 
 #### Build the image
 
@@ -189,6 +205,13 @@ To read the raw data from S3 and clean the data, run:
 ```bash
 docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY  --mount type=bind,source="$(pwd)",target=/app/ final-project clean --config_path=./config/model_config.yaml --input_source=s3://2022-msia423-hathaway-richard/raw_data/metro_interstate_traffic_volume.csv --output_path=./data/clean_data/cleaned_data.csv 
 ```
+This command uses the `clean` option as the first command-line argument. Additional allowable flags include:
+
+`--config_path`: Location of the pipeline configuration YAML file.
+
+`--input_source`: Location of the input raw data file on S3.
+
+`--output_source`: Location to save the cleaned data output csv file.
 
 #### Generate Features
 
@@ -197,12 +220,33 @@ To generate features for model training, including splitting the data into train
 docker run --mount type=bind,source="$(pwd)",target=/app/ final-project generate_features --config_path=./config/model_config.yaml --input_source=./data/clean_data/cleaned_data.csv --one_hot_path=./models/ohe_object.joblib --train_output_source=./data/train_test_data/train_data.csv --test_output_source=./data/train_test_data/test_data.csv
 ```
 
+This command uses the `generate_features` option as the first command-line argument. Additional allowable flags include:
+
+`--config_path`: Location of the pipeline configuration YAML file.
+
+`--input_source`: Location of the cleaned data csv file.
+
+`--one_hot_path`: Location to save the fitted one-hot-encoder object.
+
+`--train_output_source`: Location to save the train data csv file.
+
+`--test_output_source`: Location to save the test data csv file.
+
+
 #### Train Model
 
 To train the model, run:
 ```bash
 docker run --mount type=bind,source="$(pwd)",target=/app/ final-project train_model --config_path=./config/model_config.yaml --train_input_source=./data/train_test_data/train_data.csv --model_output_source=./models/trained_model_object.joblib
 ```
+
+This command uses the `train_model` option as the first command-line argument. Additional allowable flags include:
+
+`--config_path`: Location of the pipeline configuration YAML file.
+
+`--train_input_source`: Location of the train data csv file.
+
+`--model_output_source`: Location to save the fitted model object.
 
 #### Make Predictions
 
@@ -211,12 +255,32 @@ To make predictions using the trained model, run:
 docker run --mount type=bind,source="$(pwd)",target=/app/ final-project predict --config_path=./config/model_config.yaml --test_input_source=./data/train_test_data/test_data.csv --model_input_source=./models/trained_model_object.joblib --predictions_output_source=./data/predictions/predictions.csv
 ```
 
+This command uses the `predict` option as the first command-line argument. Additional allowable flags include:
+
+`--config_path`: Location of the pipeline configuration YAML file.
+
+`--model_input_source`: Location of the trained model object.
+
+`--test_input_source`: Location of the the input test data csv file.
+
+`--predictions_output_source`: Location to save the model predictions csv file.
+
 #### Evaluate the Model
 
 To make evaluate the model performance and generate metrics such as R^2 and Mean-Squared-Error, run:
 ```bash
 docker run --mount type=bind,source="$(pwd)",target=/app/ final-project evaluate --config_path=./config/model_config.yaml --test_input_source=./data/train_test_data/test_data.csv --predictions_input_source=./data/predictions/predictions.csv --performance_metrics_output_source=./data/model_performance/performance_metrics.txt
 ```
+
+This command uses the `evaluate` option as the first command-line argument. Additional allowable flags include:
+
+`--config_path`: Location of the pipeline configuration YAML file.
+
+`--test_input_source`: Location of the the input test data csv file.
+
+`--predictions_input_source`: Location of the input predictions csv file.
+
+`--performance_metrics_output_source`: Location to save the performance metrics test file.
 
 ### 4. Run the entire pipeline
 To run the entire pipeline, from reading the data from S3 through model evaluation, first build the image in the root of the repository: 
@@ -248,21 +312,6 @@ To run the Flask application, run:
  docker run -e SQLALCHEMY_DATABASE_URI --mount type=bind,source="$(pwd)",target=/app/ -p 5000:5000 final-project-app
 ```
 You should be able to access the app at http://127.0.0.1:5000/ in your browser.
-
-
-#### Kill the container 
-
-The app will need to be terminated once finished. To do so, execute the following commands:
-
-First find the name of the container.
-```bash 
-docker container ls
-```
-Next, kill the container:
-
-```bash
-docker kill <container name> 
-```
 
 ### 6. Unit Tests
 
