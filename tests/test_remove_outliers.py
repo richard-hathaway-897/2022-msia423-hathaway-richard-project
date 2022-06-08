@@ -4,7 +4,7 @@ import pytest
 import src.remove_outliers
 
 
-def test_remove_outliers():
+def test_remove_outliers() -> None:
     """This unit test tests the successful execution of the remove_outliers function. It should remove
     any values that do not meet the parameters of min/max or valid values passed into the function.
     """
@@ -47,7 +47,7 @@ def test_remove_outliers():
     pd.testing.assert_frame_equal(df_expected_output, df_test_output)
 
 
-def test_remove_outliers_invalid_column():
+def test_remove_outliers_invalid_column() -> None:
     """This unit test tests the execution of the remove_outliers function when an invalid column name is encountered.
     It should raise a KeyError.
     """
@@ -84,7 +84,7 @@ def test_remove_outliers_invalid_column():
                                             valid_week_days=["Tuesday"])
 
 
-def test_filter_data():
+def test_filter_data() -> None:
     """This unit test tests the execution of the filter_data function. It should remove
     any rows that do not meet the parameters of min/max or valid values passed into the function
     """
@@ -110,7 +110,7 @@ def test_filter_data():
     pd.testing.assert_frame_equal(df_expected_output, df_test_output)
 
 
-def test_filter_data_invalid_column():
+def test_filter_data_invalid_column() -> None:
     """This unit test tests the execution of the filter_data function when an invalid column name is encountered.
     It should raise a KeyError.
     """

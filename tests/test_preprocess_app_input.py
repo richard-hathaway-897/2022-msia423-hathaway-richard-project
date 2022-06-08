@@ -61,7 +61,7 @@ remove_outlier_params = {
 }
 
 
-def test_app_input_transformations():
+def test_app_input_transformations() -> None:
     """This function tests the successful execution of the app_input_transformations function.
     """
 
@@ -89,7 +89,7 @@ def test_app_input_transformations():
     pd.testing.assert_frame_equal(df_expected_output, df_test_output)
 
 
-def test_app_input_transformations_invalid_user_input():
+def test_app_input_transformations_invalid_user_input() -> None:
     """This function tests the execution of the app_input_transformations function when the user input is not valid,
     such as entering a string for the temperature. It should raise a TypeError.
     """
@@ -108,7 +108,7 @@ def test_app_input_transformations_invalid_user_input():
                                                            temperature_column="temp")
 
 
-def test_app_input_one_hot_encode():
+def test_app_input_one_hot_encode() -> None:
     """This function tests the successful execution of the one_hot_encode function. It should one-hot-encode the input.
     """
 
@@ -142,7 +142,7 @@ def test_app_input_one_hot_encode():
     pd.testing.assert_frame_equal(df_expected_output, df_test_output)
 
 
-def test_app_input_one_hot_encode_invalid_column():
+def test_app_input_one_hot_encode_invalid_column() -> None:
     """This function tests the execution of the one_hot_encode function when the function tries to one-hot-encode
     a column name that the original one-hot-encoder was not trained on. It should raise a KeyError.
     """
@@ -169,7 +169,7 @@ def test_app_input_one_hot_encode_invalid_column():
                                                           one_hot_encode_columns=["column2"])
 
 
-def test_validate_app_input():
+def test_validate_app_input() -> None:
     """This function tests the successful execution of the validate_app_input function. It should return the
     original data cast to the correct data type.
     """
@@ -184,7 +184,7 @@ def test_validate_app_input():
     assert expected_output == test_output
 
 
-def test_validate_app_input_invalid_datatype():
+def test_validate_app_input_invalid_datatype() -> None:
     """This unit test tests the execution of the validate_app_input function when a field is of an invalid data type,
     such as temp not being a numeric column.
     """
@@ -196,7 +196,7 @@ def test_validate_app_input_invalid_datatype():
                                                     validate_user_input_params=validate_user_input_params)
 
 
-def test_validate_app_input_dtype():
+def test_validate_app_input_dtype() -> None:
     """This function tests the successful execution of the validate_app_input_dtype function. It should return the
     original data cast to the correct data type.
     """
@@ -212,7 +212,7 @@ def test_validate_app_input_dtype():
     assert expected_output == test_output
 
 
-def test_validate_app_input_dtype_invalid_user_input():
+def test_validate_app_input_dtype_invalid_user_input() -> None:
     """This unit test tests the execution of the validate_app_input_dtype function when a field is of an
     invalid data type, such as temp not being a numeric column.
     """

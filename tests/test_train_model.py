@@ -4,7 +4,7 @@ import pytest
 import src.train_model
 
 
-def test_train_model():
+def test_train_model() -> None:
     """This unit test tests the successful execution of the train_model function. It should train a
     RandomForestRegressor sklearn model. It tests if the parameters of the expected random forest model are the same
     as the output random forest model."""
@@ -49,7 +49,7 @@ def test_train_model():
     assert expected_output_params == true_output_attrs
 
 
-def test_train_model_no_response_column():
+def test_train_model_no_response_column() -> None:
     """This unit test tests the execution of the train_model function when the wrong name for the response column
     is passed to the function, and that column does not exist in the training dataframe. It should raise a KeyError.
     """

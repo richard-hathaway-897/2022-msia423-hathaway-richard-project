@@ -5,7 +5,7 @@ import pytest
 import src.predict
 
 
-def test_make_predictions():
+def test_make_predictions() -> None:
     """This unit test tests the execution of the make_predictions function. It should output a pandas Series with the
     correct predictions."""
 
@@ -26,10 +26,10 @@ def test_make_predictions():
     ]
     df_model_training = pd.DataFrame(data=model_training, columns = ["response", "column1", "column2"])
     rf_test = RandomForestRegressor(n_estimators=10,
-                                 criterion="squared_error",
-                                 min_samples_split=2,
-                                 max_features=2,
-                                 random_state=24)
+                                    criterion="squared_error",
+                                    min_samples_split=2,
+                                    max_features=2,
+                                    random_state=24)
     rf_test.fit(X=df_model_training[["column1", "column2"]], y=df_model_training["response"])
 
     # Now, define the input test data and the expected output and use the random forest model to make the prediction
@@ -48,7 +48,7 @@ def test_make_predictions():
     pd.testing.assert_series_equal(expected_output, test_output)
 
 
-def test_make_predictions_model_not_fit():
+def test_make_predictions_model_not_fit() -> None:
     """This unit test tests the execution of the make_predictions function when the model object is not fit.
     It should raise a ValueError."""
 
@@ -70,13 +70,13 @@ def test_make_predictions_model_not_fit():
                                      is_test_data=True)
 
 
-def test_classify_traffic():
+def test_classify_traffic() -> None:
     """This unit test tests the successful execution of the classify traffic function.
     """
     assert "light" == src.predict.classify_traffic(traffic_prediction=1000)
 
 
-def test_classify_traffic_negative_value():
+def test_classify_traffic_negative_value() -> None:
     """This unit test tests the execution of the classify traffic function when the input predicton is negative.
     It should raise a ValueError
     """

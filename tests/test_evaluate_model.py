@@ -5,7 +5,7 @@ import sklearn
 import src.evaluate_model
 
 
-def test_evaluate_model():
+def test_evaluate_model() -> None:
     """This unit test tests the successful evaluation of the evaluate_model function. It should return a dictionary with
     metrics for R^2 and MSE.
     """
@@ -33,7 +33,7 @@ def test_evaluate_model():
     assert test_output == expected_output
 
 
-def test_evaluate_model_too_few_predictions():
+def test_evaluate_model_too_few_predictions() -> None:
     """This unit test tests the execution of the evaluate_model function when the input predictions do not have the
     same shape as the input true values. It should raise a ValueError."""
     input_test_prediction = [

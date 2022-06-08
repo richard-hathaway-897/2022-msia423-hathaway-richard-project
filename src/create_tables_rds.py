@@ -397,6 +397,7 @@ class QueryManager:
         logger.info("Updated most recent prediction with prediction %f and volume %s.",
                     new_prediction_value, new_volume)
 
+
 def create_db(engine_string: str) -> None:
     """This function creates all of the tables in the database needed to run the web application.
 

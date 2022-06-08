@@ -35,7 +35,7 @@ def read_yaml(config_path: str) -> dict:
     return config_dict
 
 
-def read_csv_url(data_source: str) -> pd.DataFrame():
+def read_csv_url(data_source: str) -> pd.DataFrame:
     """
     This function fetches a csv file from a URL and reads it into a pandas dataframe.
 
@@ -179,6 +179,7 @@ def save_model_object(model: sklearn.base.BaseEstimator, output_path: str) -> No
         logger.error("Saving model object failed because the output folder does not exist. %s", os_error)
     else:
         logger.info("Saved the model object to %s", output_path)
+
 
 def save_dict_as_text(data: dict, output_path: str) -> None:
     """This function saves an input dictionary as a text file, with each key-value pair in the dictionary written

@@ -6,7 +6,7 @@ PORT = 5000
 APP_NAME = "Traffic Prediction"
 SQLALCHEMY_TRACK_MODIFICATIONS = True
 HOST = "0.0.0.0"
-SQLALCHEMY_ECHO = False  # If true, SQL for queries made will be printed
+SQLALCHEMY_ECHO = False
 MAX_ROWS_SHOW = 5
 
 PATH_TRAINED_MODEL_OBJECT = './models/trained_model_object.joblib'

@@ -75,17 +75,17 @@ if __name__ == "__main__":
 
     # Score Model Subparser
     predict_subparser.add_argument("--config_path", type=str,
-                                       default="./config/model_config/pipeline_config.yaml",
-                                       help="Location of the pipeline configuration yaml file.")
+                                   default="./config/model_config/pipeline_config.yaml",
+                                   help="Location of the pipeline configuration yaml file.")
     predict_subparser.add_argument("--model_input_source", type=str,
-                                       required=True,
-                                       help="Location of the input file for trained model object.")
+                                   required=True,
+                                   help="Location of the input file for trained model object.")
     predict_subparser.add_argument("--test_input_source", type=str,
-                                       required=True,
-                                       help="Location of the input file for the test data.")
+                                   required=True,
+                                   help="Location of the input file for the test data.")
     predict_subparser.add_argument("--predictions_output_source", type=str,
-                                       required=True,
-                                       help="Location of the output file for the predicted classes.")
+                                   required=True,
+                                   help="Location of the output file for the model predictions.")
 
     # Evaluate Model Subparser
     evaluate_subparser.add_argument("--config_path", type=str,
@@ -99,7 +99,7 @@ if __name__ == "__main__":
                                     help="Location of the input file for predicted values.")
     evaluate_subparser.add_argument("--performance_metrics_output_source", type=str,
                                     required=True,
-                                    help="Location of the input file for the predicted class probabilities.")
+                                    help="Location to save the performance metrics test file.")
 
     command_line_args = parser.parse_args()
     command_choice = command_line_args.action

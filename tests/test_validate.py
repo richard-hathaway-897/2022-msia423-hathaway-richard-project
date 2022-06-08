@@ -4,7 +4,7 @@ import pytest
 import src.validate
 
 
-def test_validate_dataframe():
+def test_validate_dataframe() -> None:
     """This unit test tests the successful execution of the validate_dataframe function. It should return True if
     the data is able to be validated.
     """
@@ -20,7 +20,7 @@ def test_validate_dataframe():
     assert true_output
 
 
-def test_validate_dataframe_invalid_duplicated_input():
+def test_validate_dataframe_invalid_duplicated_input() -> None:
     """This unit test tests the execution of the validate_dataframe function when an invalid value is passed as the
     duplicated_method, such as an integer. It should raise a ValueError.
     """

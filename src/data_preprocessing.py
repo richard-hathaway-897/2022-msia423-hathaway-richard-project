@@ -213,6 +213,7 @@ def binarize_column(data: pd.DataFrame,
 
     return data
 
+
 def binarize(value: str, zero_value: str) -> int:
     """This function is a helper function that converts an input string value to a zero-one binary variable
     depending on the "zero_value"
@@ -235,6 +236,7 @@ def binarize(value: str, zero_value: str) -> int:
         return_value = 0
 
     return return_value
+
 
 def create_datetime_features(data: pd.DataFrame,
                              original_datetime_column: str,
