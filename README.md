@@ -1,19 +1,6 @@
 # Traffic Prediction in the Twin Cities
 **Richard Hathaway, Spring 2022**
 
-# Table of Contents
-* [Project Charter and Background](#Project-Charter-and-Background)
-* [Application](#Application)
-* [Project Design Decisions](#Project-Design-Decisions)
-* [Directory structure ](#Directory-structure)
-* [Running the code ](#Running-the-code)
-    * [1. Initialize the database ](#1.-Initialize-the-database)
-    * [2. Acquiring the Raw Data](#2.-Acquiring-the-Raw-Data)
-    * [3. Run each individual step of the model pipeline ](#3.-Run-each-individual-step-of-the-model-pipeline)
-    * [4. Run the entire pipeline ](#4.-Run-the-entire-pipeline)
-    * [5. Run the Flask app ](#5.-Run-the-Flask-app)
-    * [6. Unit Tests ](#6.-Unit-Tests)
-
 ## Project Charter and Background
 ### Vision
 The Minneapolis-St. Paul Metropolitan area is a metropolis of over 3.1 million people as of 2019 [1]. With a large population, traffic congestion is a significant problem for commuters, causing drivers in the Minneapolis-St. Paul region to lose an estimated 52 hours each in 2019, according to a summary of the INRIX 2019 Global Traffic Scorecard reported in the Minneapolis/St. Paul Business Journal [2]. Additionally, adverse weather, particularly in winter months, can cause major traffic issues and cause further disruptions. Understanding traffic patterns at different times of the year and at different hours of the day in the region is vital for city planners to develop solutions for mounting traffic problems and for commuters to be able to plan daily travel.
