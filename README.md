@@ -3,6 +3,8 @@
 
 This project was completed as part of MSIA 423 Analytics Value Chain course in the M.S. in Analytics program at Northwestern University.
 
+***Note:*** The live application has been taken down from AWS in order to not incur costs, but the application and model can still be run locally by cloning the repository and running the docker container by following the instructions under **5. Run the Flask App**. Additionally, the data cleaning and feature engineering pipeline cannot be run because the AWS S3 Bucket has been taken down. However, I hope the code repository is able to demonstrate my coding skillset and ability to use packages such as boto3, SQLAlchemy, and Flask to deploy a machine learning model.
+
 ## Project Charter and Background
 ### Vision
 The Minneapolis-St. Paul Metropolitan area is a metropolis of over 3.1 million people as of 2019 [1]. With a large population, traffic congestion is a significant problem for commuters, causing drivers in the Minneapolis-St. Paul region to lose an estimated 52 hours each in 2019, according to a summary of the INRIX 2019 Global Traffic Scorecard reported in the Minneapolis/St. Paul Business Journal [2]. Additionally, adverse weather, particularly in winter months, can cause major traffic issues and cause further disruptions. Understanding traffic patterns at different times of the year and at different hours of the day in the region is vital for city planners to develop solutions for mounting traffic problems and for commuters to be able to plan daily travel.
